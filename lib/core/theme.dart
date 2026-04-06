@@ -21,7 +21,6 @@ class AppTheme {
 
   static ThemeData get lightTheme => ThemeData(
         useMaterial3: true,
-        fontFamily: 'SFPro',
         colorScheme: ColorScheme.fromSeed(
           seedColor: primary,
           primary: primary,
@@ -35,7 +34,6 @@ class AppTheme {
           elevation: 0,
           centerTitle: true,
           titleTextStyle: TextStyle(
-            fontFamily: 'SFPro',
             fontSize: 17,
             fontWeight: FontWeight.w600,
             color: textPrimary,
@@ -50,7 +48,6 @@ class AppTheme {
               borderRadius: BorderRadius.circular(radiusSmall),
             ),
             textStyle: const TextStyle(
-              fontFamily: 'SFPro',
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -65,7 +62,6 @@ class AppTheme {
               borderRadius: BorderRadius.circular(radiusSmall),
             ),
             textStyle: const TextStyle(
-              fontFamily: 'SFPro',
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
