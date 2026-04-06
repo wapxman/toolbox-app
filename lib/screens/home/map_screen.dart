@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import 'box_detail_screen.dart';
+import 'box_offline_screen.dart';
 
 class MapScreen extends StatelessWidget {
   const MapScreen({super.key});
@@ -10,7 +11,6 @@ class MapScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Map placeholder
           Container(
             color: const Color(0xFFE8E8E0),
             child: Center(
@@ -19,20 +19,15 @@ class MapScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.map, size: 48, color: AppTheme.textHint),
                   const SizedBox(height: 8),
-                  Text(
-                    'Карта загружается...',
-                    style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-                  ),
+                  Text('Карта загружается...',
+                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
                   const SizedBox(height: 4),
-                  Text(
-                    'Google Maps будет подключён позже',
-                    style: TextStyle(fontSize: 12, color: AppTheme.textHint),
-                  ),
+                  Text('Google Maps будет подключён позже',
+                      style: TextStyle(fontSize: 12, color: AppTheme.textHint)),
                 ],
               ),
             ),
           ),
-          // Search bar
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -53,20 +48,15 @@ class MapScreen extends StatelessWidget {
                   children: [
                     Icon(Icons.search, color: AppTheme.textHint, size: 20),
                     const SizedBox(width: 10),
-                    Text(
-                      'Найти инструмент или бокс',
-                      style: TextStyle(fontSize: 13, color: AppTheme.textHint),
-                    ),
+                    Text('Найти инструмент или бокс',
+                        style: TextStyle(fontSize: 13, color: AppTheme.textHint)),
                   ],
                 ),
               ),
             ),
           ),
-          // Box cards
           Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
+            left: 0, right: 0, bottom: 0,
             child: SizedBox(
               height: 120,
               child: ListView(
@@ -85,19 +75,18 @@ class MapScreen extends StatelessWidget {
     );
   }
 
-  Widget _boxCard(BuildContext context, String name, String address, String tools, bool online) {
+  Widget _boxCard(BuildContext ctx, String name, String address, String tools, bool online) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BoxDetailScreen(
-              boxName: name,
-              address: address,
-              online: online,
-            ),
-          ),
-        );
+        if (online) {
+          Navigator.push(ctx, MaterialPageRoute(
+            builder: (_) => BoxDetailScreen(boxName: name, address: address, online: true),
+          ));
+        } else {
+          Navigator.push(ctx, MaterialPageRoute(
+            builder: (_) => BoxOfflineScreen(boxName: name, address: address),
+          ));
+        }
       },
       child: Container(
         width: 200,
@@ -107,27 +96,18 @@ class MapScreen extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
           border: Border.all(color: AppTheme.borderLight),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              children: [
-                Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                const SizedBox(width: 6),
-                Container(
-                  width: 6, height: 6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: online ? AppTheme.primary : AppTheme.error,
-                  ),
-                ),
-              ],
-            ),
+            Row(children: [
+              Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(width: 6),
+              Container(width: 6, height: 6,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: online ? AppTheme.primary : AppTheme.error)),
+            ]),
             const SizedBox(height: 4),
             Text(address, style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
             const SizedBox(height: 4),
