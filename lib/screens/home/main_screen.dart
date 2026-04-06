@@ -4,6 +4,7 @@ import 'map_screen.dart';
 import 'search_screen.dart';
 import '../rentals/rentals_screen.dart';
 import '../profile/profile_screen.dart';
+import '../rental/qr_scanner_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -18,15 +19,15 @@ class _MainScreenState extends State<MainScreen> {
   final _screens = const [
     MapScreen(),
     SearchScreen(),
-    SizedBox(), // placeholder for QR
+    SizedBox(),
     RentalsScreen(),
     ProfileScreen(),
   ];
 
   void _onQrTap() {
-    // TODO: navigate to QR scanner
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('QR-сканер — скоро!')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const QrScannerScreen()),
     );
   }
 
@@ -115,11 +116,7 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.qr_code_scanner,
-                color: Colors.white,
-                size: 24,
-              ),
+              child: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 24),
             ),
           ),
           Transform.translate(
