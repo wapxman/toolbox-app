@@ -1,249 +1,147 @@
 import 'package:flutter/material.dart';
+import '../../core/api_service.dart';
 import '../../core/theme.dart';
 import '../../core/constants.dart';
 import '../rental/booking_screen.dart';
 
-class ToolDetailScreen extends StatelessWidget {
-  final String toolName;
-  final String category;
-  final int pricePerDay;
-  final String boxName;
+class ToolDetailScreen extends StatefulWidget {
+  final String toolId;
+  const ToolDetailScreen({super.key, required this.toolId});
 
-  const ToolDetailScreen({
-    super.key,
-    required this.toolName,
-    required this.category,
-    required this.pricePerDay,
-    required this.boxName,
-  });
+  @override
+  State<ToolDetailScreen> createState() => _ToolDetailScreenState();
+}
+
+class _ToolDetailScreenState extends State<ToolDetailScreen> {
+  final _api = ApiService();
+  Map<String, dynamic>? _tool;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTool();
+  }
+
+  Future<void> _loadTool() async {
+    try {
+      final tool = await _api.getTool(widget.toolId);
+      if (mounted) setState(() { _tool = tool; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _loading = false; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_tool == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: Text('Инструмент не найден')),
+      );
+    }
+
+    final tool = _tool!;
+    final name = tool['name'] ?? '';
+    final brand = tool['brand'] ?? '';
+    final category = tool['category'] ?? '';
+    final dayPrice = tool['day_price'] ?? 0;
+    final specs = tool['specs'] as Map<String, dynamic>? ?? {};
+    final available = (tool['cells']?['status'] ?? 'free') == 'free';
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Инструмент'),
-      ),
+      appBar: AppBar(title: Text(name)),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Tool image placeholder
             Container(
               width: double.infinity,
-              height: 220,
-              color: AppTheme.surface,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.build, size: 64, color: AppTheme.textHint),
-                  const SizedBox(height: 8),
-                  Text(
-                    category,
-                    style: TextStyle(fontSize: 13, color: AppTheme.textHint),
-                  ),
-                ],
+              height: 200,
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: tool['photo_url'] != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(tool['photo_url'], fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Icon(Icons.build, size: 64, color: AppTheme.textHint)),
+                  )
+                : Icon(Icons.build, size: 64, color: AppTheme.textHint),
             ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name and availability
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          toolName,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE6F7EE),
-                          borderRadius:
-                              BorderRadius.circular(AppTheme.radiusPill),
-                        ),
-                        child: Text(
-                          'Свободен',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.success,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    category,
-                    style:
-                        TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                  ),
-                  const SizedBox(height: 20),
-                  // Price block
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surface,
-                      borderRadius:
-                          BorderRadius.circular(AppTheme.radiusMedium),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppConstants.formatPrice(pricePerDay),
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'за 1 день',
-                          style: TextStyle(
-                              fontSize: 13, color: AppTheme.textSecondary),
-                        ),
-                        const SizedBox(height: 12),
-                        _discountRow('от 3 дней', '−20%',
-                            AppConstants.formatPrice(AppConstants.priceForDays(3))),
-                        const SizedBox(height: 6),
-                        _discountRow('от 7 дней', '−35%',
-                            AppConstants.formatPrice(AppConstants.priceForDays(7))),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Location
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      borderRadius:
-                          BorderRadius.circular(AppTheme.radiusMedium),
-                      border: Border.all(color: AppTheme.borderLight),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.location_on_outlined,
-                            size: 20, color: AppTheme.textSecondary),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                boxName,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'ТЦ Samarqand Darvoza, 2 этаж',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Specs
-                  const Text(
-                    'Характеристики',
-                    style:
-                        TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 10),
-                  _specRow('Мощность', '600 Вт'),
-                  _specRow('Вес', '1.8 кг'),
-                  _specRow('Макс. обороты', '2800 об/мин'),
-                  _specRow('Патрон', '13 мм'),
-                  const SizedBox(height: 28),
-                  // Book button
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => BookingScreen(
-                            toolName: toolName,
-                            pricePerDay: pricePerDay,
-                            boxName: boxName,
-                          ),
-                        ),
-                      );
-                    },
-                    child: const Text('Забронировать'),
-                  ),
-                ],
+            const SizedBox(height: 16),
+            Row(children: [
+              Expanded(child: Text(name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700))),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: available ? const Color(0xFFE6F7EE) : const Color(0xFFFDE8E8),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(available ? 'Свободен' : 'Занят',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                    color: available ? AppTheme.success : AppTheme.error)),
               ),
+            ]),
+            const SizedBox(height: 4),
+            Text('$brand • $category', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FAF5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(children: [
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Стоимость аренды', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                  const SizedBox(height: 4),
+                  Text('$dayPrice сўм / день',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primary)),
+                ]),
+                const Spacer(),
+                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Text('от 3 дней', style: TextStyle(fontSize: 11, color: AppTheme.textHint)),
+                  Text('-20%', style: TextStyle(fontSize: 13, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                  Text('от 7 дней', style: TextStyle(fontSize: 11, color: AppTheme.textHint)),
+                  Text('-35%', style: TextStyle(fontSize: 13, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                ]),
+              ]),
             ),
+            if (specs.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const Text('Характеристики', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              ...specs.entries.map((e) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(children: [
+                  Expanded(child: Text(e.key, style: TextStyle(fontSize: 13, color: AppTheme.textSecondary))),
+                  Text(e.value.toString(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                ]),
+              )),
+            ],
           ],
         ),
       ),
-    );
-  }
-
-  Widget _discountRow(String label, String discount, String total) {
-    return Row(
-      children: [
-        Text(label,
-            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE6F7EE),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            discount,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.success,
-            ),
+      bottomNavigationBar: available ? SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: ElevatedButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(
+              builder: (_) => BookingScreen(tool: tool),
+            )),
+            child: const Text('Арендовать'),
           ),
         ),
-        const Spacer(),
-        Text(
-          total,
-          style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-        ),
-      ],
-    );
-  }
-
-  Widget _specRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label,
-              style:
-                  TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
-          Text(value,
-              style: const TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w500)),
-        ],
-      ),
+      ) : null,
     );
   }
 }

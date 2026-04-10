@@ -1,10 +1,35 @@
 import 'package:flutter/material.dart';
-import '../../core/theme.dart';
-import 'box_detail_screen.dart';
-import 'box_offline_screen.dart';
+import '../core/api_service.dart';
+import '../core/theme.dart';
+import 'home/box_detail_screen.dart';
+import 'home/box_offline_screen.dart';
 
-class MapScreen extends StatelessWidget {
+class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
+
+  @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  final _api = ApiService();
+  List<dynamic> _boxes = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBoxes();
+  }
+
+  Future<void> _loadBoxes() async {
+    try {
+      final boxes = await _api.getBoxes();
+      if (mounted) setState(() { _boxes = boxes; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _loading = false; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,11 +44,10 @@ class MapScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.map, size: 48, color: AppTheme.textHint),
                   const SizedBox(height: 8),
-                  Text('Карта загружается...',
-                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+                  Text('Карта боксов', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
                   const SizedBox(height: 4),
-                  Text('Google Maps будет подключён позже',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textHint)),
+                  Text(_loading ? 'Загрузка...' : '${_boxes.length} боксов найдено',
+                    style: TextStyle(fontSize: 12, color: AppTheme.textHint)),
                 ],
               ),
             ),
@@ -37,11 +61,7 @@ class MapScreen extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                   boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
+                    BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 2)),
                   ],
                 ),
                 child: Row(
@@ -49,7 +69,7 @@ class MapScreen extends StatelessWidget {
                     Icon(Icons.search, color: AppTheme.textHint, size: 20),
                     const SizedBox(width: 10),
                     Text('Найти инструмент или бокс',
-                        style: TextStyle(fontSize: 13, color: AppTheme.textHint)),
+                      style: TextStyle(fontSize: 13, color: AppTheme.textHint)),
                   ],
                 ),
               ),
@@ -59,15 +79,16 @@ class MapScreen extends StatelessWidget {
             left: 0, right: 0, bottom: 0,
             child: SizedBox(
               height: 120,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  _boxCard(context, 'ToolBox #1', 'ТЦ Samarqand Darvoza', '12 инструментов', true),
-                  _boxCard(context, 'ToolBox #2', 'Строймаркет Чиланзар', '8 инструментов', true),
-                  _boxCard(context, 'ToolBox #3', 'ТЦ Mega Planet', '5 инструментов', false),
-                ],
-              ),
+              child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _boxes.isEmpty
+                  ? Center(child: Text('Боксы не найдены', style: TextStyle(color: AppTheme.textHint)))
+                  : ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _boxes.length,
+                      itemBuilder: (ctx, i) => _boxCard(ctx, _boxes[i]),
+                    ),
             ),
           ),
         ],
@@ -75,12 +96,23 @@ class MapScreen extends StatelessWidget {
     );
   }
 
-  Widget _boxCard(BuildContext ctx, String name, String address, String tools, bool online) {
+  Widget _boxCard(BuildContext ctx, Map<String, dynamic> box) {
+    final online = box['is_active'] ?? true;
+    final name = box['name'] ?? 'Бокс';
+    final address = box['address'] ?? '';
+    final freeCells = box['free_cells'] ?? 0;
+    final totalCells = box['total_cells'] ?? 0;
+
     return GestureDetector(
       onTap: () {
         if (online) {
           Navigator.push(ctx, MaterialPageRoute(
-            builder: (_) => BoxDetailScreen(boxName: name, address: address, online: true),
+            builder: (_) => BoxDetailScreen(
+              boxId: box['id'].toString(),
+              boxName: name,
+              address: address,
+              online: true,
+            ),
           ));
         } else {
           Navigator.push(ctx, MaterialPageRoute(
@@ -103,7 +135,7 @@ class MapScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(children: [
-              Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              Expanded(child: Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
               const SizedBox(width: 6),
               Container(width: 6, height: 6,
                 decoration: BoxDecoration(shape: BoxShape.circle, color: online ? AppTheme.primary : AppTheme.error)),
@@ -111,7 +143,8 @@ class MapScreen extends StatelessWidget {
             const SizedBox(height: 4),
             Text(address, style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
             const SizedBox(height: 4),
-            Text(tools, style: TextStyle(fontSize: 11, color: AppTheme.textHint)),
+            Text('$freeCells из $totalCells свободно',
+              style: TextStyle(fontSize: 11, color: AppTheme.textHint)),
           ],
         ),
       ),
