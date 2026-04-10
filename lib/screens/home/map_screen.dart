@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../core/api_service.dart';
-import '../core/theme.dart';
-import 'home/box_detail_screen.dart';
-import 'home/box_offline_screen.dart';
+import '../../core/api_service.dart';
+import '../../core/theme.dart';
+import 'box_detail_screen.dart';
+import 'box_offline_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -44,9 +44,9 @@ class _MapScreenState extends State<MapScreen> {
                 children: [
                   Icon(Icons.map, size: 48, color: AppTheme.textHint),
                   const SizedBox(height: 8),
-                  Text('Карта боксов', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+                  Text('\u041a\u0430\u0440\u0442\u0430 \u0431\u043e\u043a\u0441\u043e\u0432', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
                   const SizedBox(height: 4),
-                  Text(_loading ? 'Загрузка...' : '${_boxes.length} боксов найдено',
+                  Text(_loading ? '\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430...' : '${_boxes.length} \u0431\u043e\u043a\u0441\u043e\u0432 \u043d\u0430\u0439\u0434\u0435\u043d\u043e',
                     style: TextStyle(fontSize: 12, color: AppTheme.textHint)),
                 ],
               ),
@@ -68,7 +68,7 @@ class _MapScreenState extends State<MapScreen> {
                   children: [
                     Icon(Icons.search, color: AppTheme.textHint, size: 20),
                     const SizedBox(width: 10),
-                    Text('Найти инструмент или бокс',
+                    Text('\u041d\u0430\u0439\u0442\u0438 \u0438\u043d\u0441\u0442\u0440\u0443\u043c\u0435\u043d\u0442 \u0438\u043b\u0438 \u0431\u043e\u043a\u0441',
                       style: TextStyle(fontSize: 13, color: AppTheme.textHint)),
                   ],
                 ),
@@ -82,7 +82,7 @@ class _MapScreenState extends State<MapScreen> {
               child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _boxes.isEmpty
-                  ? Center(child: Text('Боксы не найдены', style: TextStyle(color: AppTheme.textHint)))
+                  ? Center(child: Text('\u0411\u043e\u043a\u0441\u044b \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u044b', style: TextStyle(color: AppTheme.textHint)))
                   : ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -98,7 +98,7 @@ class _MapScreenState extends State<MapScreen> {
 
   Widget _boxCard(BuildContext ctx, Map<String, dynamic> box) {
     final online = box['is_active'] ?? true;
-    final name = box['name'] ?? 'Бокс';
+    final name = box['name'] ?? '\u0411\u043e\u043a\u0441';
     final address = box['address'] ?? '';
     final freeCells = box['free_cells'] ?? 0;
     final totalCells = box['total_cells'] ?? 0;
@@ -143,7 +143,7 @@ class _MapScreenState extends State<MapScreen> {
             const SizedBox(height: 4),
             Text(address, style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
             const SizedBox(height: 4),
-            Text('$freeCells из $totalCells свободно',
+            Text('$freeCells \u0438\u0437 $totalCells \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u043e',
               style: TextStyle(fontSize: 11, color: AppTheme.textHint)),
           ],
         ),
