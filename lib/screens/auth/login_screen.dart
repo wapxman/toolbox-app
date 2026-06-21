@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme.dart';
+import '../../core/api_service.dart';
 import '../home/main_screen.dart';
 import 'register_screen.dart';
 
@@ -12,26 +13,56 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _api = ApiService();
   final _phoneController = TextEditingController();
   final _codeControllers = List.generate(4, (_) => TextEditingController());
   final _codeFocusNodes = List.generate(4, (_) => FocusNode());
   bool _codeSent = false;
+  bool _loading = false;
 
-  void _sendCode() {
-    if (_phoneController.text.length >= 9) {
-      setState(() => _codeSent = true);
+  String get _phone => '+998${_phoneController.text}';
+
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<void> _sendCode() async {
+    if (_phoneController.text.length < 9) {
+      _toast('Введите номер: 9 цифр после +998');
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      await _api.sendCode(_phone);
+      if (!mounted) return;
+      setState(() { _codeSent = true; _loading = false; });
       _codeFocusNodes[0].requestFocus();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _toast(e is ApiException ? e.message : 'Не удалось отправить код');
     }
   }
 
-  void _verifyCode() {
+  Future<void> _verifyCode() async {
     final code = _codeControllers.map((c) => c.text).join();
-    if (code.length == 4) {
+    if (code.length != 4 || _loading) return;
+    setState(() => _loading = true);
+    try {
+      await _api.verify(_phone, code);
+      if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const MainScreen()),
         (_) => false,
       );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      for (final c in _codeControllers) c.clear();
+      _codeFocusNodes[0].requestFocus();
+      _toast(e is ApiException ? e.message : 'Неверный код');
     }
   }
 
@@ -95,8 +126,8 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 22),
             ElevatedButton(
-              onPressed: _sendCode,
-              child: const Text('Получить код'),
+              onPressed: _loading ? null : _sendCode,
+              child: Text(_loading ? 'Подождите…' : 'Получить код'),
             ),
             if (_codeSent) ...[
               const SizedBox(height: 28),
