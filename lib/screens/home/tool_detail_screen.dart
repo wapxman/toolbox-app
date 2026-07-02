@@ -108,6 +108,7 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
           child: ElevatedButton(
             onPressed: () => Navigator.push(context, MaterialPageRoute(
               builder: (_) => BookingScreen(
+                toolId: widget.toolId,
                 toolName: name,
                 pricePerDay: dayPrice is int ? dayPrice : int.tryParse(dayPrice.toString()) ?? 0,
                 boxName: boxName,

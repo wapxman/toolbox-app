@@ -135,6 +135,9 @@ class ApiService {
 
   Future<Map<String, dynamic>> getRental(String id) => _get('/rentals/$id');
 
+  Future<Map<String, dynamic>> getPaymentStatus(String rentalId) =>
+    _get('/rentals/$rentalId/payment-status');
+
   Future<Map<String, dynamic>> extendRental(String id, int extraDays) =>
     _post('/rentals/$id/extend', {'extra_days': extraDays});
 

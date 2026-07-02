@@ -4,12 +4,14 @@ import '../../core/constants.dart';
 import 'payment_screen.dart';
 
 class BookingScreen extends StatefulWidget {
+  final String toolId;
   final String toolName;
   final int pricePerDay;
   final String boxName;
 
   const BookingScreen({
     super.key,
+    required this.toolId,
     required this.toolName,
     required this.pricePerDay,
     required this.boxName,
@@ -272,6 +274,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => PaymentScreen(
+                      toolId: widget.toolId,
                       toolName: widget.toolName,
                       days: _days,
                       totalPrice: _totalPrice,

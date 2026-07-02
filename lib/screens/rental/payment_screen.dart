@@ -1,15 +1,20 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme.dart';
 import '../../core/constants.dart';
+import '../../core/api_service.dart';
 import 'unlock_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
+  final String toolId;
   final String toolName;
   final int days;
   final int totalPrice;
 
   const PaymentScreen({
     super.key,
+    required this.toolId,
     required this.toolName,
     required this.days,
     required this.totalPrice,
@@ -20,7 +25,88 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
+  final _api = ApiService();
   String _selected = 'payme';
+  bool _processing = false;      // создаём аренду / открываем оплату
+  bool _waitingPayment = false;  // ссылка открыта, ждём callback от Payme
+  String? _rentalId;
+  String? _paymentUrl;
+  Timer? _pollTimer;
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<void> _pay() async {
+    if (_processing) return;
+
+    if (_selected == 'click') {
+      _toast('Click скоро подключим — пока доступен Payme');
+      return;
+    }
+
+    setState(() => _processing = true);
+    try {
+      // 1) Создаём аренду (pending_payment), если ещё не создана
+      if (_rentalId == null) {
+        final res = await _api.createRental(widget.toolId, widget.days);
+        _rentalId = res['rental']?['id']?.toString();
+        _paymentUrl = res['payment_url']?.toString();
+      }
+
+      if (_rentalId == null) {
+        throw ApiException(0, 'Не удалось создать аренду');
+      }
+      if (_paymentUrl == null || _paymentUrl!.isEmpty || _paymentUrl == 'null') {
+        throw ApiException(0, 'Оплата временно недоступна, попробуйте позже');
+      }
+
+      // 2) Открываем страницу оплаты Payme
+      final opened = await launchUrl(
+        Uri.parse(_paymentUrl!),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened) throw ApiException(0, 'Не удалось открыть страницу оплаты');
+
+      // 3) Ждём подтверждение оплаты (webhook Payme -> наш бэкенд)
+      setState(() { _processing = false; _waitingPayment = true; });
+      _pollTimer?.cancel();
+      _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _checkPaid());
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _processing = false);
+      _toast(e is ApiException ? e.message : 'Ошибка оплаты');
+    }
+  }
+
+  Future<void> _checkPaid() async {
+    if (_rentalId == null) return;
+    try {
+      final res = await _api.getPaymentStatus(_rentalId!);
+      if (res['paid'] == true) {
+        _pollTimer?.cancel();
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => UnlockScreen(toolName: widget.toolName)),
+        );
+      } else if (res['status'] == 'cancelled') {
+        _pollTimer?.cancel();
+        if (!mounted) return;
+        setState(() { _waitingPayment = false; _rentalId = null; _paymentUrl = null; });
+        _toast('Оплата отменена');
+      }
+    } catch (_) {
+      // сеть мигнула — попробуем в следующем тике
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,18 +147,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'К оплате',
                         style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
+                            fontSize: 13, color: AppTheme.textSecondary),
                       ),
                       Text(
                         AppConstants.formatPrice(widget.totalPrice),
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
                           color: AppTheme.primary,
                         ),
                       ),
@@ -86,16 +170,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
             // Payment method
             const Text(
               'Способ оплаты',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
             _paymentOption(
               'payme',
               'Payme',
               Icons.account_balance_wallet,
-              const Color(0xFF00CCCC),
+              const Color(0xFF33CCCC),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             _paymentOption(
               'click',
               'Click',
@@ -104,51 +188,45 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
             const Spacer(),
 
-            // Pay button
-            ElevatedButton(
-              onPressed: () {
-                // Simulate payment
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => AlertDialog(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+            if (_waitingPayment) ...[
+              Center(
+                child: Column(
+                  children: [
+                    const CircularProgressIndicator(color: AppTheme.primary),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Ожидаем подтверждение оплаты...',
+                      style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
                     ),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(height: 8),
-                        const CircularProgressIndicator(
-                          color: AppTheme.primary,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Обработка оплаты...',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ],
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () async {
+                        if (_paymentUrl != null) {
+                          await launchUrl(Uri.parse(_paymentUrl!),
+                              mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      child: const Text('Открыть оплату ещё раз'),
                     ),
-                  ),
-                );
-                // Simulate delay
-                Future.delayed(const Duration(seconds: 2), () {
-                  Navigator.pop(context); // close dialog
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => UnlockScreen(
-                        toolName: widget.toolName,
-                      ),
-                    ),
-                  );
-                });
-              },
-              child: Text(
-                'Оплатить ${AppConstants.formatPrice(widget.totalPrice)}',
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+            ] else ...[
+              ElevatedButton(
+                onPressed: _processing ? null : _pay,
+                child: _processing
+                    ? const SizedBox(
+                        width: 20, height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(
+                        'Оплатить ${AppConstants.formatPrice(widget.totalPrice)}',
+                      ),
+              ),
+              const SizedBox(height: 16),
+            ],
           ],
         ),
       ),
@@ -175,31 +253,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: color, size: 22),
             ),
             const SizedBox(width: 12),
             Text(
               label,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
             const Spacer(),
-            Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected ? AppTheme.primary : AppTheme.border,
-                  width: isSelected ? 6 : 1.5,
-                ),
-              ),
-            ),
+            if (isSelected)
+              const Icon(Icons.check_circle, color: AppTheme.primary, size: 22),
           ],
         ),
       ),
