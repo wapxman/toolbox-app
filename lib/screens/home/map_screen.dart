@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yandex_mapkit/yandex_mapkit.dart';
 import '../../core/api_service.dart';
 import '../../core/theme.dart';
 import 'box_detail_screen.dart';
@@ -15,6 +16,10 @@ class _MapScreenState extends State<MapScreen> {
   final _api = ApiService();
   List<dynamic> _boxes = [];
   bool _loading = true;
+  YandexMapController? _mapController;
+
+  // Ташкент по умолчанию, пока боксы не загрузились
+  static const _defaultPoint = Point(latitude: 41.311081, longitude: 69.279737);
 
   @override
   void initState() {
@@ -26,8 +31,64 @@ class _MapScreenState extends State<MapScreen> {
     try {
       final boxes = await _api.getBoxes();
       if (mounted) setState(() { _boxes = boxes; _loading = false; });
+      _moveToBoxes();
     } catch (e) {
       if (mounted) setState(() { _loading = false; });
+    }
+  }
+
+  Future<void> _moveToBoxes() async {
+    if (_mapController == null || _boxes.isEmpty) return;
+    final first = _boxes.first;
+    final lat = (first['lat'] as num?)?.toDouble();
+    final lng = (first['lng'] as num?)?.toDouble();
+    if (lat == null || lng == null) return;
+    await _mapController!.moveCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: Point(latitude: lat, longitude: lng), zoom: 13),
+      ),
+      animation: const MapAnimation(type: MapAnimationType.smooth, duration: 0.8),
+    );
+  }
+
+  List<PlacemarkMapObject> get _placemarks {
+    final marks = <PlacemarkMapObject>[];
+    for (final box in _boxes) {
+      final lat = (box['lat'] as num?)?.toDouble();
+      final lng = (box['lng'] as num?)?.toDouble();
+      if (lat == null || lng == null) continue;
+      marks.add(PlacemarkMapObject(
+        mapId: MapObjectId('box_${box['id']}'),
+        point: Point(latitude: lat, longitude: lng),
+        opacity: 1,
+        icon: PlacemarkIcon.single(PlacemarkIconStyle(
+          image: BitmapDescriptor.fromAssetImage('assets/icons/map_pin.png'),
+          scale: 0.9,
+          anchor: const Offset(0.5, 1.0),
+        )),
+        onTap: (_, __) => _openBox(box),
+      ));
+    }
+    return marks;
+  }
+
+  void _openBox(Map<String, dynamic> box) {
+    final online = (box['status'] ?? 'online') == 'online';
+    final name = box['name'] ?? 'Бокс';
+    final address = box['address'] ?? '';
+    if (online) {
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => BoxDetailScreen(
+          boxId: box['id'].toString(),
+          boxName: name,
+          address: address,
+          online: true,
+        ),
+      ));
+    } else {
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => BoxOfflineScreen(boxName: name, address: address),
+      ));
     }
   }
 
@@ -36,21 +97,17 @@ class _MapScreenState extends State<MapScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          Container(
-            color: const Color(0xFFE8E8E0),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.map, size: 48, color: AppTheme.textHint),
-                  const SizedBox(height: 8),
-                  Text('\u041a\u0430\u0440\u0442\u0430 \u0431\u043e\u043a\u0441\u043e\u0432', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
-                  const SizedBox(height: 4),
-                  Text(_loading ? '\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430...' : '${_boxes.length} \u0431\u043e\u043a\u0441\u043e\u0432 \u043d\u0430\u0439\u0434\u0435\u043d\u043e',
-                    style: TextStyle(fontSize: 12, color: AppTheme.textHint)),
-                ],
-              ),
-            ),
+          YandexMap(
+            mapObjects: _placemarks,
+            onMapCreated: (controller) async {
+              _mapController = controller;
+              await controller.moveCamera(
+                CameraUpdate.newCameraPosition(
+                  const CameraPosition(target: _defaultPoint, zoom: 12),
+                ),
+              );
+              _moveToBoxes();
+            },
           ),
           SafeArea(
             child: Padding(
@@ -68,7 +125,7 @@ class _MapScreenState extends State<MapScreen> {
                   children: [
                     Icon(Icons.search, color: AppTheme.textHint, size: 20),
                     const SizedBox(width: 10),
-                    Text('\u041d\u0430\u0439\u0442\u0438 \u0438\u043d\u0441\u0442\u0440\u0443\u043c\u0435\u043d\u0442 \u0438\u043b\u0438 \u0431\u043e\u043a\u0441',
+                    Text('Найти инструмент или бокс',
                       style: TextStyle(fontSize: 13, color: AppTheme.textHint)),
                   ],
                 ),
@@ -82,7 +139,7 @@ class _MapScreenState extends State<MapScreen> {
               child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _boxes.isEmpty
-                  ? Center(child: Text('\u0411\u043e\u043a\u0441\u044b \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u044b', style: TextStyle(color: AppTheme.textHint)))
+                  ? Center(child: Text('Боксы не найдены', style: TextStyle(color: AppTheme.textHint)))
                   : ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -97,29 +154,14 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _boxCard(BuildContext ctx, Map<String, dynamic> box) {
-    final online = box['is_active'] ?? true;
-    final name = box['name'] ?? '\u0411\u043e\u043a\u0441';
+    final online = (box['status'] ?? 'online') == 'online';
+    final name = box['name'] ?? 'Бокс';
     final address = box['address'] ?? '';
     final freeCells = box['free_cells'] ?? 0;
-    final totalCells = box['total_cells'] ?? 0;
+    final totalCells = box['cells_count'] ?? 0;
 
     return GestureDetector(
-      onTap: () {
-        if (online) {
-          Navigator.push(ctx, MaterialPageRoute(
-            builder: (_) => BoxDetailScreen(
-              boxId: box['id'].toString(),
-              boxName: name,
-              address: address,
-              online: true,
-            ),
-          ));
-        } else {
-          Navigator.push(ctx, MaterialPageRoute(
-            builder: (_) => BoxOfflineScreen(boxName: name, address: address),
-          ));
-        }
-      },
+      onTap: () => _openBox(box),
       child: Container(
         width: 200,
         margin: const EdgeInsets.only(right: 10, bottom: 16),
@@ -143,7 +185,7 @@ class _MapScreenState extends State<MapScreen> {
             const SizedBox(height: 4),
             Text(address, style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
             const SizedBox(height: 4),
-            Text('$freeCells \u0438\u0437 $totalCells \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u043e',
+            Text('$freeCells из $totalCells свободно',
               style: TextStyle(fontSize: 11, color: AppTheme.textHint)),
           ],
         ),

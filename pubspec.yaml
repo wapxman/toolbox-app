@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.6
-  google_maps_flutter: ^2.5.0
+  yandex_mapkit: ^4.1.0
   mobile_scanner: ^5.1.1
   http: ^1.2.0
   shared_preferences: ^2.2.2
