@@ -22,7 +22,7 @@ class _ExtendScreenState extends State<ExtendScreen> {
   int _extraDays = 1;
 
   int get _newTotal => widget.currentDays + _extraDays;
-  int get _extensionPrice => AppConstants.priceForDays(_newTotal) - AppConstants.priceForDays(widget.currentDays);
+  int get _extensionPrice => AppConstants.priceForDays(_newTotal, widget.pricePerDay) - AppConstants.priceForDays(widget.currentDays, widget.pricePerDay);
 
   void _setExtra(int d) {
     if (d >= 1 && d <= 30) setState(() => _extraDays = d);

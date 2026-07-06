@@ -24,7 +24,7 @@ class BookingScreen extends StatefulWidget {
 class _BookingScreenState extends State<BookingScreen> {
   int _days = 1;
 
-  int get _totalPrice => AppConstants.priceForDays(_days);
+  int get _totalPrice => AppConstants.priceForDays(_days, widget.pricePerDay);
 
   String? get _discountLabel {
     if (_days >= 7) return '−35%';

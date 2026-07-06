@@ -42,8 +42,9 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
     final category = tool['category'] ?? '';
     final dayPrice = tool['day_price'] ?? 0;
     final specs = tool['specs'] as Map<String, dynamic>? ?? {};
-    final available = (tool['cells']?['status'] ?? 'free') == 'free';
-    final boxName = tool['cells']?['boxes']?['name'] ?? '';
+    // /tools/:id отдаёт `cell_status` и `box` плоскими полями
+    final available = (tool['cell_status'] ?? tool['status'] ?? tool['cells']?['status'] ?? 'free') == 'free';
+    final boxName = tool['box']?['name'] ?? tool['cells']?['boxes']?['name'] ?? '';
 
     return Scaffold(
       appBar: AppBar(title: Text(name)),

@@ -103,7 +103,8 @@ class _BoxDetailScreenState extends State<BoxDetailScreen> {
     final brand = tool['brand'] ?? '';
     final category = tool['category'] ?? '';
     final dayPrice = tool['day_price'] ?? 0;
-    final available = (tool['cells']?['status'] ?? 'free') == 'free';
+    // /boxes/:id/tools отдаёт статус ячейки плоским полем `status`
+    final available = (tool['status'] ?? tool['cell_status'] ?? tool['cells']?['status'] ?? 'free') == 'free';
 
     return GestureDetector(
       onTap: () => Navigator.push(ctx, MaterialPageRoute(
