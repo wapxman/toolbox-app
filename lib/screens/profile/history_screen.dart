@@ -8,10 +8,10 @@ class HistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final history = [
-      _Rental('Дрель Bosch GSB 13 RE', 'ToolBox #1', 3, 192000, 'active'),
-      _Rental('Шуруповёрт Makita DF331D', 'ToolBox #2', 1, 80000, 'completed'),
-      _Rental('Болгарка DeWalt DWE4057', 'ToolBox #1', 7, 364000, 'completed'),
-      _Rental('Перфоратор Bosch GBH 2-26', 'ToolBox #1', 2, 160000, 'overdue'),
+      _Rental('Дрель Bosch GSB 13 RE', 'Taketool #1', 3, 192000, 'active'),
+      _Rental('Шуруповёрт Makita DF331D', 'Taketool #2', 1, 80000, 'completed'),
+      _Rental('Болгарка DeWalt DWE4057', 'Taketool #1', 7, 364000, 'completed'),
+      _Rental('Перфоратор Bosch GBH 2-26', 'Taketool #1', 2, 160000, 'overdue'),
     ];
 
     return Scaffold(

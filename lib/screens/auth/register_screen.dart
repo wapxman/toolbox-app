@@ -79,7 +79,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,8 +137,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 22),
               ElevatedButton(
-                onPressed: _sendCode,
-                child: const Text('Получить код'),
+                onPressed: _loading ? null : _sendCode,
+                child: _loading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Получить код'),
               ),
               if (_codeSent) ...[
                 const SizedBox(height: 28),
@@ -213,6 +225,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ],
           ),
+            ),
+            if (_loading)
+              const Positioned.fill(
+                child: ColoredBox(
+                  color: Color(0x66000000),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              ),
+          ],
         ),
       ),
     );

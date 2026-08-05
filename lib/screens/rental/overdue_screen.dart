@@ -11,7 +11,7 @@ class OverdueScreen extends StatelessWidget {
   const OverdueScreen({
     super.key,
     required this.toolName,
-    this.boxName = 'ToolBox #1',
+    this.boxName = 'Taketool #1',
     this.overdueDays = 2,
     this.penaltyPerDay = 120000,
   });

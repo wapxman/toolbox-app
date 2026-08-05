@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api_service.dart';
 import '../../core/theme.dart';
+import '../../core/tool_photo.dart';
 import 'tool_detail_screen.dart';
 
 class BoxDetailScreen extends StatefulWidget {
@@ -118,9 +119,7 @@ class _BoxDetailScreenState extends State<BoxDetailScreen> {
           border: Border.all(color: AppTheme.borderLight),
         ),
         child: Row(children: [
-          Container(width: 56, height: 56,
-            decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(8)),
-            child: Icon(Icons.build, color: AppTheme.textHint)),
+          ToolPhoto(url: tool['photo_url']?.toString(), width: 56, height: 56, radius: 8, iconSize: 24),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),

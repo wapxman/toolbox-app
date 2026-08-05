@@ -27,7 +27,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _Slide(
       icon: Icons.handyman_outlined,
       title: 'Работайте и верните',
-      description: 'Используйте инструмент сколько нужно.\nВерните в любой бокс ToolBox.',
+      description: 'Используйте инструмент сколько нужно.\nВерните в любой бокс Taketool.',
     ),
   ];
 

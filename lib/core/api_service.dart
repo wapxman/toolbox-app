@@ -126,8 +126,8 @@ class ApiService {
 
   // === RENTALS API ===
 
-  Future<Map<String, dynamic>> createRental(String toolId, int days) =>
-    _post('/rentals', {'tool_id': toolId, 'days': days});
+  Future<Map<String, dynamic>> createRental(String toolId, int days, {String provider = 'payme'}) =>
+    _post('/rentals', {'tool_id': toolId, 'days': days, 'provider': provider});
 
   Future<List<dynamic>> getActiveRentals() => _getList('/rentals/active');
 

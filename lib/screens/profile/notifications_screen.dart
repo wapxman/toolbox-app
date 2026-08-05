@@ -11,7 +11,7 @@ class NotificationsScreen extends StatelessWidget {
       _Noti('Оплата прошла', '192 000 сўм через Payme', '2 мин назад', AppTheme.primary, true),
       _Noti('Аренда заканчивается', 'Шуруповёрт Makita — завтра в 14:00', '1 час назад', AppTheme.warning, true),
       _Noti('Аренда просрочена!', 'Болгарка DeWalt — просрочка 2 дня', 'Вчера', AppTheme.error, false),
-      _Noti('Добро пожаловать!', 'Добро пожаловать в ToolBox', '3 апр', AppTheme.primary, false),
+      _Noti('Добро пожаловать!', 'Добро пожаловать в Taketool', '3 апр', AppTheme.primary, false),
     ];
 
     return Scaffold(

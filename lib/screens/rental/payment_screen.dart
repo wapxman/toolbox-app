@@ -29,8 +29,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
   String _selected = 'payme';
   bool _processing = false;      // создаём аренду / открываем оплату
   bool _waitingPayment = false;  // ссылка открыта, ждём callback от Payme
+  bool _timedOut = false;        // подтверждение не пришло за отведённое время
+  int _pollTicks = 0;            // сколько раз опросили статус
+  static const int _maxPollTicks = 40; // 40 × 3с = 2 минуты ожидания
   String? _rentalId;
   String? _paymentUrl;
+  bool _clickInvoice = false;   // Click метод 3: счёт отправлен в приложение Click Up
   Timer? _pollTimer;
 
   @override
@@ -47,36 +51,71 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Future<void> _pay() async {
     if (_processing) return;
 
-    if (_selected == 'click') {
-      _toast('Click скоро подключим — пока доступен Payme');
-      return;
-    }
-
     setState(() => _processing = true);
     try {
-      // 1) Создаём аренду (pending_payment), если ещё не создана
+      // 1) Создаём аренду (pending_payment), если ещё не создана.
+      //    provider выбирает способ оплаты: payme или click.
       if (_rentalId == null) {
-        final res = await _api.createRental(widget.toolId, widget.days);
+        final res = await _api.createRental(widget.toolId, widget.days, provider: _selected);
         _rentalId = res['rental']?['id']?.toString();
         _paymentUrl = res['payment_url']?.toString();
+        _clickInvoice = res['click_invoice'] == true;
       }
 
       if (_rentalId == null) {
         throw ApiException(0, 'Не удалось создать аренду');
       }
+
+      // Click метод 3: счёт с суммой уже отправлен пушем в приложение Click Up.
+      // Ссылку НЕ открываем — пользователь подтверждает оплату в Click, а мы ждём
+      // подтверждение через опрос статуса (SHOP API Complete активирует аренду).
+      if (_selected == 'click' && _clickInvoice) {
+        _toast('Счёт отправлен в приложение Click. Подтвердите оплату.');
+        // Как в Payme — сразу открываем приложение Click, где уже ждёт счёт с суммой.
+        if (_paymentUrl != null && _paymentUrl!.isNotEmpty && _paymentUrl != 'null') {
+          try {
+            await launchUrl(Uri.parse(_paymentUrl!), mode: LaunchMode.externalApplication);
+          } catch (_) {}
+        }
+        setState(() { _processing = false; _waitingPayment = true; _timedOut = false; _pollTicks = 0; });
+        _pollTimer?.cancel();
+        _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _checkPaid());
+        return;
+      }
+
       if (_paymentUrl == null || _paymentUrl!.isEmpty || _paymentUrl == 'null') {
         throw ApiException(0, 'Оплата временно недоступна, попробуйте позже');
       }
 
-      // 2) Открываем страницу оплаты Payme
-      final opened = await launchUrl(
-        Uri.parse(_paymentUrl!),
-        mode: LaunchMode.externalApplication,
-      );
+      // 2) Открываем страницу оплаты во ВСТРОЕННОМ вью.
+      //    Через externalApplication Android отдавал ссылку установленному
+      //    приложению (Payme/Click Up), и оно checkout-ссылку не открывало.
+      //    Click: ссылку my.click.uz жёстко перехватывает Click Up (verified
+      //    app links срабатывают даже в Custom Tab), поэтому Click открываем во
+      //    встроенном WebView — он рендерит страницу внутри приложения и НЕ
+      //    отдаёт ссылку внешнему приложению. Payme оставляем в Custom Tab.
+      final uri = Uri.parse(_paymentUrl!);
+      final primaryMode = _selected == 'click'
+          ? LaunchMode.inAppWebView
+          : LaunchMode.inAppBrowserView;
+      bool opened = false;
+      try {
+        opened = await launchUrl(uri, mode: primaryMode);
+      } catch (_) {}
+      if (!opened) {
+        try {
+          opened = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+        } catch (_) {}
+      }
+      if (!opened) {
+        try {
+          opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } catch (_) {}
+      }
       if (!opened) throw ApiException(0, 'Не удалось открыть страницу оплаты');
 
       // 3) Ждём подтверждение оплаты (webhook Payme -> наш бэкенд)
-      setState(() { _processing = false; _waitingPayment = true; });
+      setState(() { _processing = false; _waitingPayment = true; _timedOut = false; _pollTicks = 0; });
       _pollTimer?.cancel();
       _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _checkPaid());
     } catch (e) {
@@ -88,6 +127,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Future<void> _checkPaid() async {
     if (_rentalId == null) return;
+    _pollTicks++;
     try {
       final res = await _api.getPaymentStatus(_rentalId!);
       if (res['paid'] == true) {
@@ -97,14 +137,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
           context,
           MaterialPageRoute(builder: (_) => UnlockScreen(toolName: widget.toolName)),
         );
+        return;
       } else if (res['status'] == 'cancelled') {
         _pollTimer?.cancel();
         if (!mounted) return;
         setState(() { _waitingPayment = false; _rentalId = null; _paymentUrl = null; });
         _toast('Оплата отменена');
+        return;
       }
     } catch (_) {
       // сеть мигнула — попробуем в следующем тике
+    }
+    // Подтверждение не пришло за отведённое время — не висим вечно
+    if (_pollTicks >= _maxPollTicks) {
+      _pollTimer?.cancel();
+      if (!mounted) return;
+      setState(() => _timedOut = true);
     }
   }
 
@@ -114,7 +162,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       appBar: AppBar(
         title: const Text('Оплата'),
       ),
-      body: Padding(
+      body: SafeArea(
+        child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,7 +237,52 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
             const Spacer(),
 
-            if (_waitingPayment) ...[
+            if (_waitingPayment && _timedOut) ...[
+              // Подтверждение не пришло за 2 минуты — не держим бесконечный спиннер
+              Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.access_time, size: 40, color: AppTheme.textSecondary),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Оплата пока не подтвердилась',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        'Если Вы уже оплатили — статус обновится сам, деньги не потеряются. '
+                        'Можно попробовать оплатить ещё раз или вернуться позже.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton(
+                      onPressed: () {
+                        setState(() { _timedOut = false; _pollTicks = 0; });
+                        _pollTimer?.cancel();
+                        _pollTimer = Timer.periodic(
+                            const Duration(seconds: 3), (_) => _checkPaid());
+                      },
+                      child: const Text('Проверить ещё раз'),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () async {
+                        if (_paymentUrl != null) {
+                          await launchUrl(Uri.parse(_paymentUrl!),
+                              mode: LaunchMode.inAppBrowserView);
+                        }
+                      },
+                      child: const Text('Открыть оплату ещё раз'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ] else if (_waitingPayment) ...[
               Center(
                 child: Column(
                   children: [
@@ -203,7 +297,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       onPressed: () async {
                         if (_paymentUrl != null) {
                           await launchUrl(Uri.parse(_paymentUrl!),
-                              mode: LaunchMode.externalApplication);
+                              mode: LaunchMode.inAppBrowserView);
                         }
                       },
                       child: const Text('Открыть оплату ещё раз'),
@@ -229,6 +323,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ],
           ],
         ),
+      ),
       ),
     );
   }

@@ -14,7 +14,7 @@ class ActiveRentalScreen extends StatelessWidget {
     required this.toolName,
     this.days = 3,
     this.totalPrice = 192000,
-    this.boxName = 'ToolBox #1',
+    this.boxName = 'Taketool #1',
   });
 
   @override
@@ -199,7 +199,7 @@ class ActiveRentalScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Верните $toolName в любой бокс ToolBox.',
+              'Верните $toolName в любой бокс Taketool.',
               style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 12),

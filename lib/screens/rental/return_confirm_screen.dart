@@ -9,7 +9,7 @@ class ReturnConfirmScreen extends StatelessWidget {
   const ReturnConfirmScreen({
     super.key,
     required this.toolName,
-    this.boxName = 'ToolBox #1',
+    this.boxName = 'Taketool #1',
   });
 
   @override
@@ -74,7 +74,7 @@ class ReturnConfirmScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
                 child: Text(
-                  'Спасибо за использование ToolBox!',
+                  'Спасибо за использование Taketool!',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,

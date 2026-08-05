@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color primary = Color(0xFF1D9E75);
-  static const Color primaryDark = Color(0xFF178A65);
+  // Фирменный красный Taketool (цвет иконки #DC0000; лого #C80013)
+  static const Color primary = Color(0xFFDC0000);
+  static const Color primaryDark = Color(0xFFB00000);
   static const Color background = Color(0xFFFFFFFF);
   static const Color surface = Color(0xFFF8F8F5);
   static const Color textPrimary = Color(0xFF1A1A1A);

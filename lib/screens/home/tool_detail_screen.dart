@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api_service.dart';
 import '../../core/theme.dart';
+import '../../core/tool_photo.dart';
 import '../rental/booking_screen.dart';
 
 class ToolDetailScreen extends StatefulWidget {
@@ -51,9 +52,13 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(width: double.infinity, height: 200,
-            decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(12)),
-            child: Icon(Icons.build, size: 64, color: AppTheme.textHint)),
+          ToolPhoto(
+            url: tool['photo_url']?.toString(),
+            width: double.infinity,
+            height: 200,
+            radius: 12,
+            iconSize: 64,
+          ),
           const SizedBox(height: 16),
           Row(children: [
             Expanded(child: Text(name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700))),

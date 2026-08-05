@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/theme.dart';
+import 'core/api_service.dart';
 import 'screens/welcome_screen.dart';
+import 'screens/home/main_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -11,19 +13,22 @@ void main() {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
-  runApp(const ToolBoxApp());
+  // Восстанавливаем сохранённый вход, чтобы не логиниться каждый раз через SMS
+  await ApiService().loadToken();
+  runApp(TaketoolApp(loggedIn: ApiService().isLoggedIn));
 }
 
-class ToolBoxApp extends StatelessWidget {
-  const ToolBoxApp({super.key});
+class TaketoolApp extends StatelessWidget {
+  final bool loggedIn;
+  const TaketoolApp({super.key, this.loggedIn = false});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ToolBox',
+      title: 'Taketool',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const WelcomeScreen(),
+      home: loggedIn ? const MainScreen() : const WelcomeScreen(),
     );
   }
 }

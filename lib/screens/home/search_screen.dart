@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api_service.dart';
 import '../../core/theme.dart';
+import '../../core/tool_photo.dart';
 import 'tool_detail_screen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -68,9 +69,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       final tool = _results[i];
                       return ListTile(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: AppTheme.borderLight)),
-                        leading: Container(width: 44, height: 44,
-                          decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(8)),
-                          child: Icon(Icons.build, color: AppTheme.textHint, size: 20)),
+                        leading: ToolPhoto(url: tool['photo_url']?.toString(), width: 44, height: 44, radius: 8, iconSize: 20),
                         title: Text(tool['name'] ?? '', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                         subtitle: Text('${tool['brand'] ?? ''} \u2022 ${tool['day_price'] ?? 0} \u0441\u045e\u043c/\u0434\u0435\u043d\u044c',
                           style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),

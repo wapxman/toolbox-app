@@ -16,29 +16,13 @@ class WelcomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(flex: 2),
-              // Logo
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: AppTheme.primary,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.lock_outline,
-                  color: Colors.white,
-                  size: 40,
-                ),
+              // Логотип Taketool
+              Image.asset(
+                'assets/images/logo.png',
+                height: 64,
+                fit: BoxFit.contain,
               ),
               const SizedBox(height: 18),
-              const Text(
-                'ToolBox',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
               Text(
                 'Аренда электроинструментов\nиз умных боксов. Быстро, удобно, 24/7',
                 textAlign: TextAlign.center,
