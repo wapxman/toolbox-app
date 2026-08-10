@@ -27,6 +27,16 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Deep link для возврата из оплаты: страница /return после Click/Payme
+                 редиректит на taketool://payment — система поднимает наше приложение
+                 (singleTop: активити не пересоздаётся, Flutter просто выходит на передний
+                 план, а экран оплаты уже сам показывает успех по поллингу). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="taketool" android:host="payment"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
