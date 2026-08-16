@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api_service.dart';
 import '../../core/theme.dart';
+import 'rental_detail_screen.dart';
 
 class RentalsScreen extends StatefulWidget {
   const RentalsScreen({super.key});
@@ -67,9 +68,11 @@ class _RentalsScreenState extends State<RentalsScreen> {
     final expectedEnd = rental['expected_end'] != null
       ? DateTime.tryParse(rental['expected_end'])
       : null;
-    final isOverdue = status == 'overdue';
+    // Просрочку определяем и по дате: бэкенд может ещё не проставить overdue
+    final isOverdue = status == 'overdue' ||
+      (expectedEnd != null && DateTime.now().toUtc().isAfter(expectedEnd.toUtc()));
 
-    return Container(
+    return _tappable(rental, Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -93,10 +96,33 @@ class _RentalsScreenState extends State<RentalsScreen> {
             ),
           ]),
           const SizedBox(height: 8),
-          Text('$days дн. • до ${expectedEnd != null ? '${expectedEnd.day}.${expectedEnd.month.toString().padLeft(2, '0')}' : '—'}',
-            style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+          Row(children: [
+            Expanded(
+              child: Text('$days дн. • до ${expectedEnd != null ? '${expectedEnd.day}.${expectedEnd.month.toString().padLeft(2, '0')}' : '—'}',
+                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+            ),
+            Text('Открыть',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.primary)),
+            Icon(Icons.chevron_right, size: 18, color: AppTheme.primary),
+          ]),
         ],
       ),
+    ));
+  }
+
+  // Оборачивает карточку в кликабельную зону: тап → экран деталей,
+  // после возврата/продления (pop с true) список перезагружается.
+  Widget _tappable(Map<String, dynamic> rental, Widget card) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+      onTap: () async {
+        final changed = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(builder: (_) => RentalDetailScreen(rental: rental)),
+        );
+        if (changed == true) _loadRentals();
+      },
+      child: card,
     );
   }
 }
