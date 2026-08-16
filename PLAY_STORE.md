@@ -55,6 +55,13 @@
 - Deep link `taketool://payment` — custom scheme, верификация App Links не нужна.
 - Контакты в карточке: e-mail **support@taketool.uz** (⚠️ ящик должен реально существовать — сейчас MX-записей на taketool.uz нет), тел. +998 93 523 60 60, сайт https://taketool.uz.
 
+## Статус на 16.08.2026 (вечер) — СДЕЛАНО в консоли AB PARTNERS (id 8097938601347141656)
+Приложение «Taketool: аренда инструмента», app id 4973195279668045635, package uz.taketool.app.
+✅ AAB 6 (1.0.5) опубликован во Внутреннем тестировании (тестеры btursunovb@, bekhruznosirov0066@)
+✅ Все декларации, категория Инструменты, контакты, карточка (тексты, иконка, feature, скриншоты телефон/7"/10")
+⬜ Production: Тестирование и выпуск → Рабочая версия → Создать выпуск → «Добавить из библиотеки» бандл 6 → страны (Узбекистан) → Далее → Сохранить и опубликовать (уходит на проверку Google, обычно 1–7 дней).
+⚠️ Контактный e-mail в карточке временно btursunovb@gmail.com — заменить на support@taketool.uz, когда появится ящик.
+
 ## Порядок в Play Console (новое приложение)
 1. Create app → название «Taketool: аренда инструмента», язык по умолчанию ru-RU, App, Free.
 2. Set up your app: Privacy policy URL, App access (тест-аккаунт выше), Ads (нет), Content rating, Target audience (18+), News (нет), Data safety, Government apps (нет), Financial features (нет), Health (нет), App category + contacts.
