@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../core/api_service.dart';
 import '../../core/theme.dart';
+import '../welcome_screen.dart';
+import 'about_screen.dart';
+import 'history_screen.dart';
+import 'notifications_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -26,6 +30,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) setState(() { _user = user; _loading = false; });
     } catch (e) {
       if (mounted) setState(() { _loading = false; });
+    }
+  }
+
+  void _goToWelcome() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+      (_) => false,
+    );
+  }
+
+  Future<void> _logout() async {
+    await _api.clearToken();
+    if (mounted) _goToWelcome();
+  }
+
+  // Удаление аккаунта — требование Google Play / App Store.
+  // Сервер обезличивает данные; при открытых арендах вернёт 409 с пояснением.
+  Future<void> _confirmDeleteAccount() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить аккаунт?'),
+        content: const Text(
+          'Ваш номер телефона и имя будут удалены, войти в этот аккаунт станет невозможно. '
+          'История завершённых аренд сохранится в обезличенном виде для бухгалтерии.\n\n'
+          'Перед удалением верните инструмент и закройте активные аренды.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _loading = true);
+    try {
+      await _api.deleteAccount();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Аккаунт удалён')),
+      );
+      _goToWelcome();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e is ApiException ? e.message : 'Не удалось удалить аккаунт'),
+      ));
     }
   }
 
@@ -59,24 +114,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _statsRow(),
                   const SizedBox(height: 24),
                   _menuItem(Icons.history, 'История аренд', () {
-                    Navigator.pushNamed(context, '/history');
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const HistoryScreen()));
                   }),
                   _menuItem(Icons.notifications_outlined, 'Уведомления', () {
-                    Navigator.pushNamed(context, '/notifications');
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const NotificationsScreen()));
                   }),
-                  _menuItem(Icons.info_outline, 'О приложении', () {}),
+                  _menuItem(Icons.info_outline, 'О приложении', () {
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const AboutScreen()));
+                  }),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
-                      onPressed: () async {
-                        await _api.clearToken();
-                        if (mounted) {
-                          Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
-                        }
-                      },
+                      onPressed: _logout,
                       child: const Text('Выйти', style: TextStyle(color: Colors.red)),
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: _confirmDeleteAccount,
+                    child: Text('Удалить аккаунт',
+                        style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
                   ),
                 ],
               ),

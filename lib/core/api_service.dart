@@ -109,6 +109,17 @@ class ApiService {
   Future<Map<String, dynamic>> updateMe(String name) =>
     _patch('/auth/me', {'name': name});
 
+  /// Удаление аккаунта (обезличивание на сервере). После успеха токен стирается.
+  Future<Map<String, dynamic>> deleteAccount() async {
+    final res = await http.delete(
+      Uri.parse('${ApiConfig.baseUrl}/auth/me'),
+      headers: _headers,
+    ).timeout(ApiConfig.timeout);
+    final body = _handleResponse(res);
+    await clearToken();
+    return body;
+  }
+
   // === BOXES API ===
 
   Future<List<dynamic>> getBoxes() => _getList('/boxes');
@@ -147,6 +158,9 @@ class ApiService {
   // === NOTIFICATIONS API ===
 
   Future<List<dynamic>> getNotifications() => _getList('/notifications');
+
+  Future<Map<String, dynamic>> markAllNotificationsRead() =>
+    _patch('/notifications/read-all', {});
 
   // === LOCKS API ===
 

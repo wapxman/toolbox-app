@@ -1,7 +1,13 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <!-- Яндекс MapKit тянет геолокацию в свой манифест, но приложение местоположение
+         пользователя не запрашивает и не использует — убираем, чтобы не декларировать
+         сбор геоданных в Google Play (Data safety) и не пугать пользователя запросом. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove"/>
     <application
         android:label="Taketool"
         android:name="${applicationName}"

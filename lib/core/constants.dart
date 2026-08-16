@@ -3,6 +3,16 @@ class ApiConfig {
   static const Duration timeout = Duration(seconds: 15);
 }
 
+/// Публичные страницы (требования Google Play / App Store)
+class LegalLinks {
+  static const String site = 'https://taketool.uz';
+  static const String privacy = 'https://www.taketool.uz/privacy.html';
+  static const String terms = 'https://www.taketool.uz/terms.html';
+  static const String deleteAccount = 'https://www.taketool.uz/delete-account.html';
+  static const String supportEmail = 'support@taketool.uz';
+  static const String supportPhone = '+998 93 523 60 60';
+}
+
 class AppConstants {
   // Фолбэк, если у инструмента не пришла цена с бэкенда
   static const int basePricePerDay = 80000; // сум

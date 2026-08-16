@@ -1,4 +1,4 @@
-package uz.toolbox.toolbox_app
+package uz.taketool.app
 
 import com.yandex.mapkit.MapKitFactory
 import io.flutter.embedding.android.FlutterActivity

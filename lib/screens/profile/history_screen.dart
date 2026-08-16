@@ -1,106 +1,141 @@
 import 'package:flutter/material.dart';
+import '../../core/api_service.dart';
 import '../../core/theme.dart';
 import '../../core/constants.dart';
 
-class HistoryScreen extends StatelessWidget {
+/// История завершённых аренд (GET /rentals/history).
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final history = [
-      _Rental('Дрель Bosch GSB 13 RE', 'Taketool #1', 3, 192000, 'active'),
-      _Rental('Шуруповёрт Makita DF331D', 'Taketool #2', 1, 80000, 'completed'),
-      _Rental('Болгарка DeWalt DWE4057', 'Taketool #1', 7, 364000, 'completed'),
-      _Rental('Перфоратор Bosch GBH 2-26', 'Taketool #1', 2, 160000, 'overdue'),
-    ];
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
 
+class _HistoryScreenState extends State<HistoryScreen> {
+  final _api = ApiService();
+  List<dynamic> _items = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final items = await _api.getRentalHistory();
+      if (mounted) setState(() { _items = items; _loading = false; _error = null; });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = e is ApiException ? e.message : 'Не удалось загрузить историю';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('История аренд')),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: history.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (_, i) {
-          final r = history[i];
-          return Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-              border: Border.all(color: AppTheme.borderLight),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(r.toolName,
-                          style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w600)),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? _message(Icons.cloud_off_outlined, _error!)
+              : _items.isEmpty
+                  ? _message(Icons.history, 'Завершённых аренд пока нет')
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _items.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, i) => _card(_items[i] as Map<String, dynamic>),
+                      ),
                     ),
-                    _statusPill(r.status),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.location_on_outlined,
-                        size: 13, color: AppTheme.textHint),
-                    const SizedBox(width: 4),
-                    Text(r.boxName,
-                        style:
-                            TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                    const Spacer(),
-                    Text('${r.days} ${AppConstants.daysWord(r.days)}',
-                        style:
-                            TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(AppConstants.formatPrice(r.price),
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w500)),
-              ],
-            ),
-          );
-        },
+    );
+  }
+
+  Widget _message(IconData icon, String text) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 56, color: AppTheme.textHint),
+          const SizedBox(height: 10),
+          Text(text, style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+        ],
       ),
     );
   }
 
-  Widget _statusPill(String status) {
-    Color bg, fg;
-    String label;
-    switch (status) {
-      case 'active':
-        bg = const Color(0xFFE8F4FD);
-        fg = const Color(0xFF1A6FB5);
-        label = 'Активна';
-        break;
-      case 'overdue':
-        bg = const Color(0xFFFDE8E8);
-        fg = AppTheme.error;
-        label = 'Просрочена';
-        break;
-      default:
-        bg = const Color(0xFFE6F7EE);
-        fg = AppTheme.success;
-        label = 'Завершена';
-    }
+  Widget _card(Map<String, dynamic> r) {
+    final tool = r['tools'] as Map<String, dynamic>? ?? {};
+    final name = tool['name'] ?? 'Инструмент';
+    final days = (r['days'] as num?)?.toInt() ?? 0;
+    final price = (r['total_price'] as num?)?.toInt() ?? 0;
+    final fee = (r['overdue_fee'] as num?)?.toInt() ?? 0;
+    final started = DateTime.tryParse(r['started_at'] ?? '')?.toLocal();
+    final ended = DateTime.tryParse(r['actual_end'] ?? '')?.toLocal();
+    String d(DateTime? t) => t == null
+        ? '—'
+        : '${t.day.toString().padLeft(2, '0')}.${t.month.toString().padLeft(2, '0')}.${t.year}';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+        border: Border.all(color: AppTheme.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(name,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+              _pill(fee > 0 ? 'Со штрафом' : 'Завершена', fee > 0),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(Icons.calendar_today_outlined, size: 13, color: AppTheme.textHint),
+              const SizedBox(width: 4),
+              Text('${d(started)} — ${d(ended)}',
+                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+              const Spacer(),
+              Text('$days ${AppConstants.daysWord(days)}',
+                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            AppConstants.formatPrice(price) + (fee > 0 ? ' + штраф ${AppConstants.formatPrice(fee)}' : ''),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pill(String label, bool warn) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
-        color: bg,
+        color: warn ? const Color(0xFFFDE8E8) : const Color(0xFFE6F7EE),
         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(label,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg)),
+          style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: warn ? AppTheme.error : AppTheme.success)),
     );
   }
-}
-
-class _Rental {
-  final String toolName, boxName, status;
-  final int days, price;
-  _Rental(this.toolName, this.boxName, this.days, this.price, this.status);
 }

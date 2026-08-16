@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../core/theme.dart';
 import '../../core/api_service.dart';
 import '../home/main_screen.dart';
+import '../../widgets/legal_consent_text.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -135,6 +136,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 'SMS-код будет отправлен на этот номер',
                 style: TextStyle(fontSize: 12, color: AppTheme.textHint),
               ),
+              const SizedBox(height: 10),
+              const LegalConsentText(),
               const SizedBox(height: 22),
               ElevatedButton(
                 onPressed: _loading ? null : _sendCode,

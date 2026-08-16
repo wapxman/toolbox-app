@@ -34,6 +34,19 @@ Taketool — инструмент под рукой, когда он нужен.
 Инструменты (Tools) / либо Покупки (Shopping)
 
 ## Контакты
-Email: support@taketool.uz (уточнить)
+Email: support@taketool.uz
 Телефон: +998 93 523 60 60
 Сайт: https://taketool.uz
+Политика конфиденциальности: https://www.taketool.uz/privacy.html
+
+## Release notes (ru-RU), 1.0.5
+Первый релиз Taketool: карта умных боксов, бронирование и оплата через Payme/Click, открытие ячейки по QR, возврат и продление аренды в приложении.
+
+## Release notes (en-US)
+First release of Taketool: smart-locker map, booking and payment via Payme/Click, QR unlock, return and extend rentals in the app.
+
+## Short description (en-US, ≤80)
+Rent power tools 24/7 from smart lockers nearby. Book and pay online.
+
+## Full description (en-US)
+Taketool lets you rent power tools 24/7 from smart lockers across Tashkent. Find the nearest locker on the map, pick a drill, screwdriver, hammer drill or angle grinder, choose 1–14 days, pay online with Payme or Click, scan the QR code on the locker — and the cell opens. Return the tool to the same cell from the app when you're done. No deposits, no queues, discounts up to 35% for longer rentals.

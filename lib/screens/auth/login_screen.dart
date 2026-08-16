@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../core/theme.dart';
 import '../../core/api_service.dart';
 import '../home/main_screen.dart';
+import '../../widgets/legal_consent_text.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -127,6 +128,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            const LegalConsentText(),
             const SizedBox(height: 22),
             ElevatedButton(
               onPressed: _loading ? null : _sendCode,
