@@ -1,6 +1,6 @@
 # Podfile для Taketool iOS.
-# iOS 13+ — требование yandex_mapkit 4.x и mobile_scanner 5.x.
-platform :ios, '13.0'
+# iOS 15+ — требование yandex_mapkit 4.x (YandexMapsMobile 4.39).
+platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -40,9 +40,9 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
-    # Единый минимум iOS 13 для всех подов — иначе Xcode ругается на старые поды.
+    # Единый минимум iOS 15 для всех подов — иначе Xcode ругается на старые поды.
     target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
     end
   end
 end

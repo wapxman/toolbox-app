@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+
+	<key>teamID</key>
+	<string>2KJMXM75X7</string>
+
+	<key>signingStyle</key>
+	<string>manual</string>
+
+	<key>signingCertificate</key>
+	<string>Apple Distribution</string>
+
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>uz.taketool.app</key>
+		<string>Taketool App Store</string>
+	</dict>
+
+	<key>uploadSymbols</key>
+	<true/>
+
+	<key>destination</key>
+	<string>export</string>
+
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+</dict>
+</plist>
