@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../core/api_service.dart';
 import 'map_screen.dart';
 import 'search_screen.dart';
 import '../rentals/rentals_screen.dart';
 import '../profile/profile_screen.dart';
 import '../rental/qr_scanner_screen.dart';
+import '../auth/login_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -16,14 +18,6 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final _screens = const [
-    MapScreen(),
-    SearchScreen(),
-    SizedBox(),
-    RentalsScreen(),
-    ProfileScreen(),
-  ];
-
   void _onQrTap() {
     Navigator.push(
       context,
@@ -31,12 +25,77 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  /// Гостю вместо личных разделов показываем приглашение войти,
+  /// чтобы не дёргать защищённые эндпоинты без токена и не ловить 401.
+  Widget _loginPrompt(IconData icon, String title, String subtitle) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 56, color: AppTheme.textHint),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                final ok = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const LoginScreen(returnResult: true),
+                  ),
+                );
+                if (ok == true && mounted) setState(() {});
+              },
+              style: ElevatedButton.styleFrom(minimumSize: const Size(180, 44)),
+              child: const Text('Войти'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildScreens() {
+    final loggedIn = ApiService().isLoggedIn;
+    return [
+      const MapScreen(),
+      const SearchScreen(),
+      const SizedBox(),
+      loggedIn
+          ? const RentalsScreen()
+          : _loginPrompt(
+              Icons.credit_card_outlined,
+              'Здесь будут ваши аренды',
+              'Войдите, чтобы бронировать инструменты и следить за арендами.',
+            ),
+      loggedIn
+          ? const ProfileScreen()
+          : _loginPrompt(
+              Icons.person_outline,
+              'Профиль',
+              'Войдите, чтобы управлять аккаунтом и смотреть историю аренд.',
+            ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex == 2 ? 0 : _currentIndex,
-        children: _screens,
+        children: _buildScreens(),
       ),
       bottomNavigationBar: _buildTabBar(),
     );

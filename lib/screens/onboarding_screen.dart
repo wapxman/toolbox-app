@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
-import 'auth/register_screen.dart';
+import '../core/app_prefs.dart';
+import 'home/main_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -38,14 +39,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      _goToRegister();
+      _goToCatalog();
     }
   }
 
-  void _goToRegister() {
-    Navigator.pushReplacement(
+  /// После вступления пользователь попадает прямо в каталог, без регистрации.
+  /// Логин потребуется только при бронировании (Guideline 5.1.1(v)).
+  Future<void> _goToCatalog() async {
+    await AppPrefs.markIntroSeen();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+      MaterialPageRoute(builder: (_) => const MainScreen()),
+      (_) => false,
     );
   }
 
@@ -125,7 +131,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
-                    onTap: _goToRegister,
+                    onTap: _goToCatalog,
                     child: Text(
                       'Пропустить',
                       style: TextStyle(
