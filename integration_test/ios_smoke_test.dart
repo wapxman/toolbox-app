@@ -20,7 +20,7 @@ void main() {
   }
 
   testWidgets('walk through screens', (tester) async {
-    await tester.pumpWidget(const TaketoolApp(loggedIn: false));
+    await tester.pumpWidget(const TaketoolApp(showIntro: true));
     await shot(tester, '01_welcome');
 
     await tester.tap(find.text('Начать'));
