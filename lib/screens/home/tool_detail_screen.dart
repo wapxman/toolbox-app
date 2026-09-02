@@ -3,6 +3,7 @@ import '../../core/api_service.dart';
 import '../../core/theme.dart';
 import '../../core/tool_photo.dart';
 import '../rental/booking_screen.dart';
+import '../auth/login_screen.dart';
 
 class ToolDetailScreen extends StatefulWidget {
   final String toolId;
@@ -30,6 +31,27 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
     } catch (e) {
       if (mounted) setState(() { _loading = false; });
     }
+  }
+
+  /// Бронирование — действие уровня аккаунта, поэтому здесь и только здесь
+  /// гостя просим войти (Guideline 5.1.1(v): просмотр каталога остаётся открытым).
+  Future<void> _onRentPressed(String name, int dayPrice, String boxName) async {
+    if (!_api.isLoggedIn) {
+      final ok = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen(returnResult: true)),
+      );
+      if (ok != true || !mounted) return;
+    }
+    if (!mounted) return;
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => BookingScreen(
+        toolId: widget.toolId,
+        toolName: name,
+        pricePerDay: dayPrice,
+        boxName: boxName,
+      ),
+    ));
   }
 
   @override
@@ -112,14 +134,11 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: ElevatedButton(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(
-              builder: (_) => BookingScreen(
-                toolId: widget.toolId,
-                toolName: name,
-                pricePerDay: dayPrice is int ? dayPrice : int.tryParse(dayPrice.toString()) ?? 0,
-                boxName: boxName,
-              ),
-            )),
+            onPressed: () => _onRentPressed(
+              name,
+              dayPrice is int ? dayPrice : int.tryParse(dayPrice.toString()) ?? 0,
+              boxName,
+            ),
             child: const Text('\u0410\u0440\u0435\u043d\u0434\u043e\u0432\u0430\u0442\u044c'),
           ),
         ),

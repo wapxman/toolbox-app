@@ -7,7 +7,9 @@ import '../../widgets/legal_consent_text.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  /// См. [LoginScreen.returnResult] — то же поведение для регистрации.
+  final bool returnResult;
+  const RegisterScreen({super.key, this.returnResult = false});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -54,11 +56,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       await _api.verify(_phone, code);
       if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const MainScreen()),
-        (_) => false,
-      );
+      if (widget.returnResult) {
+        Navigator.pop(context, true);
+      } else {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MainScreen()),
+          (_) => false,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
