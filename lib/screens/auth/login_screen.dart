@@ -7,7 +7,11 @@ import '../../widgets/legal_consent_text.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  /// true — экран открыт как «шлагбаум» перед действием (бронирование, профиль).
+  /// После успешного входа просто закрываемся с результатом true,
+  /// чтобы вызвавший экран продолжил прерванное действие.
+  final bool returnResult;
+  const LoginScreen({super.key, this.returnResult = false});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -53,11 +57,15 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _api.verify(_phone, code);
       if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const MainScreen()),
-        (_) => false,
-      );
+      if (widget.returnResult) {
+        Navigator.pop(context, true);
+      } else {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MainScreen()),
+          (_) => false,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);

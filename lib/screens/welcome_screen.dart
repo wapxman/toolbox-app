@@ -1,10 +1,23 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
+import '../core/app_prefs.dart';
 import 'onboarding_screen.dart';
+import 'home/main_screen.dart';
 import 'auth/login_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
+
+  /// Открыть каталог без регистрации (Guideline 5.1.1(v)).
+  static Future<void> _openCatalog(BuildContext context) async {
+    await AppPrefs.markIntroSeen();
+    if (!context.mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const MainScreen()),
+      (_) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +58,20 @@ class WelcomeScreen extends StatelessWidget {
                 },
                 child: const Text('Начать'),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              // Гостевой вход: каталог доступен без регистрации
+              TextButton(
+                onPressed: () => _openCatalog(context),
+                child: Text(
+                  'Смотреть каталог без регистрации',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
               GestureDetector(
                 onTap: () {
                   Navigator.push(
