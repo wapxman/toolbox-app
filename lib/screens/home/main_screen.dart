@@ -2,21 +2,22 @@ import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../core/api_service.dart';
 import 'map_screen.dart';
-import 'search_screen.dart';
+import 'shop_screen.dart';
 import '../rentals/rentals_screen.dart';
 import '../profile/profile_screen.dart';
 import '../rental/qr_scanner_screen.dart';
 import '../auth/login_screen.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final int initialIndex;
+  const MainScreen({super.key, this.initialIndex = 0});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex = widget.initialIndex;
 
   void _onQrTap() {
     Navigator.push(
@@ -71,14 +72,14 @@ class _MainScreenState extends State<MainScreen> {
     final loggedIn = ApiService().isLoggedIn;
     return [
       const MapScreen(),
-      const SearchScreen(),
+      const ShopScreen(),
       const SizedBox(),
       loggedIn
           ? const RentalsScreen()
           : _loginPrompt(
-              Icons.credit_card_outlined,
-              'Здесь будут ваши аренды',
-              'Войдите, чтобы бронировать инструменты и следить за арендами.',
+              Icons.receipt_long_outlined,
+              'Здесь будут ваши заказы',
+              'Войдите, чтобы арендовать или покупать инструменты и следить за доставкой.',
             ),
       loggedIn
           ? const ProfileScreen()
@@ -115,9 +116,9 @@ class _MainScreenState extends State<MainScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _tabItem(0, Icons.home_outlined, Icons.home, 'Главная'),
-          _tabItem(1, Icons.search, Icons.search, 'Поиск'),
+          _tabItem(1, Icons.storefront_outlined, Icons.storefront, 'Магазин'),
           _qrButton(),
-          _tabItem(3, Icons.credit_card_outlined, Icons.credit_card, 'Аренды'),
+          _tabItem(3, Icons.receipt_long_outlined, Icons.receipt_long, 'Заказы'),
           _tabItem(4, Icons.person_outline, Icons.person, 'Профиль'),
         ],
       ),

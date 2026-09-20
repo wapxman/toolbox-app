@@ -135,10 +135,54 @@ class ApiService {
 
   Future<Map<String, dynamic>> getTool(String id) => _get('/tools/$id');
 
-  // === RENTALS API ===
+  /// Каталог магазина: все инструменты всех боксов (аренда и продажа).
+  Future<List<dynamic>> getCatalog({String? q, String? category, String? mode}) {
+    final params = <String, String>{};
+    if (q != null && q.trim().length >= 2) params['q'] = q.trim();
+    if (category != null && category.isNotEmpty) params['category'] = category;
+    if (mode != null) params['mode'] = mode;
+    final qs = params.isEmpty ? '' : '?${Uri(queryParameters: params).query}';
+    return _getList('/tools$qs');
+  }
+
+  Future<List<dynamic>> getCategories() => _getList('/tools/categories');
+
+  // === SETTINGS ===
+
+  /// Тариф и интервалы доставки (публично, без входа).
+  Future<Map<String, dynamic>> getDeliverySettings() => _get('/settings/delivery');
+
+  // === RENTALS / ORDERS API ===
 
   Future<Map<String, dynamic>> createRental(String toolId, int days, {String provider = 'payme'}) =>
     _post('/rentals', {'tool_id': toolId, 'days': days, 'provider': provider});
+
+  /// Заказ: аренда (kind=rent, days) или покупка (kind=buy),
+  /// из бокса (fulfillment=pickup) или курьером (delivery + блок адреса).
+  Future<Map<String, dynamic>> createOrder({
+    required String toolId,
+    required String kind,
+    int days = 0,
+    required String fulfillment,
+    String provider = 'payme',
+    Map<String, dynamic>? delivery,
+  }) => _post('/rentals', {
+    'tool_id': toolId,
+    'kind': kind,
+    'days': days,
+    'fulfillment': fulfillment,
+    'provider': provider,
+    if (delivery != null) 'delivery': delivery,
+  });
+
+  /// Отмена заказа клиентом (до передачи курьеру).
+  Future<Map<String, dynamic>> cancelOrder(String id) => _post('/rentals/$id/cancel', {});
+
+  /// Вызов курьера за арендованным инструментом (платно, создаёт дочерний заказ).
+  Future<Map<String, dynamic>> returnByCourier(String id, {
+    String provider = 'payme',
+    required Map<String, dynamic> delivery,
+  }) => _post('/rentals/$id/return-courier', {'provider': provider, 'delivery': delivery});
 
   Future<List<dynamic>> getActiveRentals() => _getList('/rentals/active');
 

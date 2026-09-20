@@ -4,8 +4,9 @@ import '../home/main_screen.dart';
 
 class UnlockScreen extends StatefulWidget {
   final String toolName;
+  final bool purchase;
 
-  const UnlockScreen({super.key, required this.toolName});
+  const UnlockScreen({super.key, required this.toolName, this.purchase = false});
 
   @override
   State<UnlockScreen> createState() => _UnlockScreenState();
@@ -85,7 +86,7 @@ class _UnlockScreenState extends State<UnlockScreen>
         ),
         const SizedBox(height: 8),
         Text(
-          'Заберите ${widget.toolName}',
+          widget.purchase ? 'Заберите ${widget.toolName}. Спасибо за покупку!' : 'Заберите ${widget.toolName}',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
         ),
