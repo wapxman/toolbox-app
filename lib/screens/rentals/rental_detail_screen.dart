@@ -5,6 +5,7 @@ import '../../core/order_labels.dart';
 import '../../core/theme.dart';
 import '../../core/tool_photo.dart';
 import '../rental/courier_return_screen.dart';
+import '../../widgets/support_links.dart';
 
 /// Детали заказа: аренда/покупка, из бокса/с доставкой.
 /// - доставка: таймлайн, адрес, курьер, отмена до передачи курьеру
@@ -287,14 +288,31 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
 
     if (status == 'pending_delivery') {
       final ds = r['delivery_status'];
+      if (ds == 'ready') {
+        // Покупка с самовывозом: новая единица лежит в ячейке — клиент открывает её сам
+        final cellNo = (r['pickup_cell'] as Map<String, dynamic>?)?['cell_number'];
+        w.add(btn(_busy ? spinner : Text('Открыть ячейку${cellNo != null ? ' $cellNo' : ''}'), _busy ? null : _pickup));
+        w.add(const SizedBox(height: 10));
+        w.add(const SupportButtons(caption: 'Не получается забрать? Мы на связи:'));
+        return w;
+      }
       if (ds == 'paid' || ds == 'packed') {
         w.add(btn(const Text('Отменить заказ'), _busy ? null : () => _cancel(r['id'].toString(),
             'Отменить заказ? Деньги вернутся тем же способом оплаты в течение 1–3 дней.'), outlined: true));
+        w.add(const SizedBox(height: 12));
+        w.add(const SupportButtons(caption: 'Вопросы по заказу:'));
       } else {
-        w.add(Text('Курьер уже в пути — отмена недоступна. Вопросы: ${LegalLinks.supportPhone}',
-            style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)));
+        w.add(const SupportButtons(caption: 'Курьер уже в пути — отмена недоступна. Если что-то не так, свяжитесь с нами:'));
       }
       return w;
+    }
+    if (status == 'cancelled' && r['refund_status'] == 'pending') {
+      w.add(const SupportButtons(caption: 'Деньги вернутся тем же способом оплаты в течение 1–3 рабочих дней. Вопросы по возврату:'));
+      return w;
+    }
+    if (isRentActive && isOverdue) {
+      w.add(const SupportButtons(caption: 'Не успеваете вернуть? Напишите нам, договоримся:'));
+      w.add(const SizedBox(height: 12));
     }
 
     if (isRentActive) {
@@ -316,6 +334,37 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
       );
 
   // === Действия ===
+
+  Future<void> _pickup() async {
+    final cellNo = (r['pickup_cell'] as Map<String, dynamic>?)?['cell_number'];
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Вы у бокса?', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+        content: Text('После подтверждения ячейка ${cellNo ?? ''} откроется — заберите инструмент и закройте дверцу.',
+            style: TextStyle(fontSize: 14, color: AppTheme.textSecondary, height: 1.45)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Открыть')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _busy = true);
+    try {
+      final res = await _api.pickupOrder(r['id'].toString());
+      _changed = true;
+      _toast(res['message']?.toString() ?? 'Ячейка открыта');
+      await _refresh();
+    } on ApiException catch (e) {
+      _toast(e.message);
+    } catch (_) {
+      _toast('Не удалось открыть ячейку. Проверьте интернет.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<void> _cancel(String id, String question) async {
     final ok = await showDialog<bool>(

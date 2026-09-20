@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taketool: путь клиента</title>
+<style>
+:root{--red:#dc0000;--ink:#1a1a1a;--muted:#6b6b6b;--line:#e0e0e0;--bg:#ffffff;--soft:#f8f8f5;--green:#0a7c42;--blue:#1a6fb5;--amber:#b86400}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ink:#f2f2f2;--muted:#b0b0b0;--line:#3a3a3a;--bg:#161616;--soft:#222}}
+:root[data-theme="dark"]{--ink:#f2f2f2;--muted:#b0b0b0;--line:#3a3a3a;--bg:#161616;--soft:#222}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px 16px}
+main{max-width:1100px;margin:0 auto}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:18px;margin:32px 0 10px}
+.sub{color:var(--muted);margin:0 0 20px}
+.lane{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0;background:var(--bg)}
+.lane h3{margin:0 0 10px;font-size:15px}
+.steps{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.step{border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:150px;flex:1 1 150px;background:var(--soft)}
+.step b{display:block;font-size:13px}.step small{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+.st{display:inline-block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;border-radius:6px;padding:1px 6px;margin-top:4px;background:var(--bg);border:1px solid var(--line)}
+.who{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.arrow{align-self:center;color:var(--muted);font-size:18px;padding:0 2px}
+.c{color:var(--red)}.g{color:var(--green)}.b{color:var(--blue)}.a{color:var(--amber)}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}th{background:var(--soft)}
+.legend span{display:inline-block;margin-right:14px;font-size:13px}
+@media (max-width:600px){.step{flex-basis:100%}.arrow{display:none}}
+</style>
+</head>
+<body><main>
+<h1>Taketool 1.1.1 — путь клиента от регистрации до получения или возврата</h1>
+<p class="sub">Ветки: аренда / покупка × из бокса / доставка. В скобках — статусы в базе: <code>status</code> / <code>delivery_status</code>. Кто действует: <span class="who">клиент</span>, <span class="who c">Payme/Click</span>, <span class="who b">админ</span>, <span class="who a">крон</span>.</p>
+
+<div class="lane"><h3>0. Вход (одинаково для всех веток)</h3>
+<div class="steps">
+<div class="step"><span class="who">клиент</span><b>Приветствие → «Начать»</b><small>3 слайда онбординга или «Пропустить»</small></div><div class="arrow">→</div>
+<div class="step"><span class="who">клиент</span><b>Регистрация: +998 номер</b><small>«Уже есть аккаунт? Войти» — тот же путь</small></div><div class="arrow">→</div>
+<div class="step"><span class="who">клиент</span><b>Код из SMS</b><small>Eskiz; демо-номер 900000001 / 1234</small></div><div class="arrow">→</div>
+<div class="step"><b>Главная (карта) · Магазин · Сканер · Заказы · Профиль</b><small>Без входа каталог не показывается (решение владельца). Флаг <code>AppFlags.requireLoginAtStart</code></small></div>
+</div></div>
+
+<div class="lane"><h3>1. Выбор: Магазин → карточка инструмента</h3>
+<div class="steps">
+<div class="step"><span class="who">клиент</span><b>Магазин</b><small>Переключатель Аренда / Покупка, категории, поиск. В режиме «Покупка» видны только модели с остатком новых &gt; 0</small></div><div class="arrow">→</div>
+<div class="step"><span class="who">клиент</span><b>Карточка</b><small>«Аренда N сўм/день» (арендный экземпляр из ячейки) и «Покупка нового: цена, в наличии K шт.»</small></div><div class="arrow">→</div>
+<div class="step"><b>Кнопка «Арендовать»</b><small>только если экземпляр в ячейке свободен</small></div>
+<div class="step"><b>Кнопка «Купить»</b><small>только если остаток новых &gt; 0; занятость аренды не мешает</small></div>
+</div></div>
+
+<div class="lane"><h3>2. Оформление (экран «Аренда» или «Покупка») → Оплата</h3>
+<div class="steps">
+<div class="step"><span class="who">клиент</span><b>Срок (только аренда)</b><small>1–30 дней, −20% от 3, −35% от 7</small></div><div class="arrow">→</div>
+<div class="step"><span class="who">клиент</span><b>Как получить</b><small>«Заберу из бокса» — 0 сўм · «Доставка курьером» — 50 000, адрес + интервал (сегодня/завтра, 4-часовые окна)</small></div><div class="arrow">→</div>
+<div class="step"><span class="who">клиент</span><b>Оплата Payme / Click</b><small>Заказ создан <span class="st">pending_payment</span>. Ячейка и остаток НЕ резервируются до оплаты</small></div><div class="arrow">→</div>
+<div class="step"><span class="who c">Payme/Click</span><b>Подтверждение</b><small>Webhook → <code>confirmPayment</code>. Не оплачен 24 ч → <span class="who a">крон</span> ставит <span class="st">cancelled</span></small></div>
+</div></div>
+
+<h2>3. Четыре ветки после оплаты</h2>
+
+<div class="lane"><h3 class="g">A. Аренда · из бокса</h3>
+<div class="steps">
+<div class="step"><span class="who c">оплата</span><b>Замок открыт сразу</b><small>ячейка <code>occupied</code>, срок идёт с оплаты</small><span class="st">active</span></div><div class="arrow">→</div>
+<div class="step"><span class="who">клиент</span><b>Пользуется, может продлить</b><small>«Продлить» — доплата по тем же скидкам</small><span class="st">active</span></div><div class="arrow">→</div>
+<div class="step"><span class="who a">крон 08:00</span><b>Срок вышел</b><small>уведомление со штрафом; штраф считается при возврате: дни сверх срока × цена дня × 1,5 (начатый день = день)</small><span class="st">overdue</span></div><div class="arrow">→</div>
+<div class="step"><span class="who">клиент</span><b>Возврат: «Сдать в бокс»</b><small>ячейка открывается, кладёт инструмент; ячейка <code>free</code></small><span class="st">completed</span></div>
+<div class="step"><span class="who">клиент</span><b>или «Вызвать курьера» (50 000)</b><small>см. ветку D, шаги возврата</small></div>
+</div></div>
+
+<div class="lane"><h3 class="b">B. Аренда · доставка курьером</h3>
+<div class="steps">
+<div class="step"><span class="who c">оплата</span><b>Ждёт сборки</b><small>ячейка экземпляра <code>occupied</code>; Telegram админу</small><span class="st">pending_delivery / paid</span></div><div class="arrow">→</div>
+<div class="step"><span class="who b">админ</span><b>«Открыть ячейку» → «Собран»</b><small>экземпляр забрали из бокса</small><span class="st">packed</span></div><div class="arrow">→</div>
+<div class="step"><span class="who b">админ</span><b>«Передан курьеру» (имя, телефон)</b><small>клиент видит курьера; отмена больше невозможна</small><span class="st">dispatched</span></div><div class="arrow">→</div>
+<div class="step"><span class="who b">админ</span><b>«Доставлен»</b><small>срок аренды стартует с этого момента: <code>started_at = delivered_at</code></small><span class="st">active / delivered</span></div><div class="arrow">→</div>
+<div class="step"><b>Дальше как в A</b><small>продление, просрочка, возврат в бокс или курьером</small></div>
+</div></div>
+
+<div class="lane"><h3 class="a">C. Покупка нового · из бокса</h3>
+<div class="steps">
+<div class="step"><span class="who c">оплата</span><b>Остаток −1</b><small>склад <code>tools.sale_stock</code>; ячейка не занимается</small><span class="st">pending_delivery / paid</span></div><div class="arrow">→</div>
+<div class="step"><span class="who b">админ</span><b>Кладёт новую единицу в свободную ячейку → «Готов к выдаче»</b><small>выбирает ячейку; она <code>occupied</code>; клиенту уведомление</small><span class="st">ready</span></div><div class="arrow">→</div>
+<div class="step"><span class="who">клиент</span><b>У бокса: «Открыть ячейку N»</b><small>ячейка открывается, забирает; ячейка <code>free</code></small><span class="st">completed / delivered</span></div>
+</div></div>
+
+<div class="lane"><h3 class="c">D. Покупка нового · доставка курьером</h3>
+<div class="steps">
+<div class="step"><span class="who c">оплата</span><b>Остаток −1</b><span class="st">pending_delivery / paid</span></div><div class="arrow">→</div>
+<div class="step"><span class="who b">админ</span><b>«Собран»</b><small>единица взята со склада</small><span class="st">packed</span></div><div class="arrow">→</div>
+<div class="step"><span class="who b">админ</span><b>«Передан курьеру»</b><span class="st">dispatched</span></div><div class="arrow">→</div>
+<div class="step"><span class="who b">админ</span><b>«Доставлен»</b><span class="st">completed / delivered</span></div>
+</div></div>
+
+<div class="lane"><h3>Возврат аренды курьером (из A или B)</h3>
+<div class="steps">
+<div class="step"><span class="who">клиент</span><b>«Вызвать курьера»: адрес, интервал, оплата 50 000</b><small>дочерний заказ <code>kind=courier_return</code>; сдать в бокс уже нельзя, вызов можно отменить до выезда</small><span class="st">child: pending_delivery / paid</span></div><div class="arrow">→</div>
+<div class="step"><span class="who b">админ</span><b>«Передан курьеру»</b><span class="st">child: dispatched</span></div><div class="arrow">→</div>
+<div class="step"><span class="who b">админ</span><b>«Забрал у клиента»</b><small>аренда завершена, штраф за просрочку посчитан; ячейка остаётся <code>occupied</code>, пока инструмент не в боксе</small><span class="st">rent: completed, restock_pending</span></div><div class="arrow">→</div>
+<div class="step"><span class="who b">админ</span><b>«Инструмент в боксе»</b><small>ячейка <code>free</code></small></div>
+</div></div>
+
+<div class="lane"><h3>Отмена и возврат денег</h3>
+<div class="steps">
+<div class="step"><span class="who">клиент</span><b>До оплаты</b><small>просто закрывается, денег нет</small><span class="st">cancelled</span></div>
+<div class="step"><span class="who">клиент / админ</span><b>После оплаты, до «Передан курьеру» (для покупки из бокса — до «Готов к выдаче»)</b><small>остаток / ячейка возвращаются; если инструмент уже собран — ждёт «Инструмент в боксе / Вернул на склад»</small><span class="st">cancelled, refund_status = pending</span></div><div class="arrow">→</div>
+<div class="step"><span class="who b">админ</span><b>Возвращает деньги в кассе Payme/Click → «Деньги возвращены»</b><small>клиенту уведомление</small><span class="st">refund_status = done</span></div>
+<div class="step"><span class="who c">Payme</span><b>Отмена со стороны Payme после оплаты</b><small>заказ отменяется, refund сразу done, остаток/ячейка обратно</small></div>
+</div></div>
+
+<h2>Сводная таблица статусов</h2>
+<table>
+<tr><th>status</th><th>delivery_status</th><th>Кто ставит</th><th>Что видит клиент</th><th>Что делает админ</th></tr>
+<tr><td>pending_payment</td><td>—</td><td>приложение при «Оплатить»</td><td>«Ждёт оплаты» (в список активных не попадает)</td><td>ничего; через 24 ч крон отменит</td></tr>
+<tr><td>active</td><td>— / delivered</td><td>оплата (из бокса) или админ «Доставлен»</td><td>«Активна · вернуть до …», Вернуть / Продлить</td><td>—</td></tr>
+<tr><td>overdue</td><td></td><td>крон</td><td>«Просрочена», оценка штрафа, кнопки поддержки</td><td>может завершить вручную в «Аренды»</td></tr>
+<tr><td>pending_delivery</td><td>paid</td><td>оплата</td><td>«Оплачен, готовим» / «кладём в бокс», Отменить</td><td>Открыть ячейку · Собран · Положил в ячейку</td></tr>
+<tr><td>pending_delivery</td><td>ready</td><td>админ</td><td>«Готов к выдаче · ячейка N», кнопка «Открыть ячейку»</td><td>ждёт клиента; отмена только через админа</td></tr>
+<tr><td>pending_delivery</td><td>packed</td><td>админ</td><td>«Собран», Отменить</td><td>Передан курьеру</td></tr>
+<tr><td>pending_delivery</td><td>dispatched</td><td>админ</td><td>«Курьер в пути», имя/телефон курьера, отмена недоступна</td><td>Доставлен / Забрал у клиента</td></tr>
+<tr><td>completed</td><td>delivered / picked_up / —</td><td>клиент (бокс/выдача) или админ</td><td>«Возвращён» / «Куплен», штраф если был</td><td>«Инструмент в боксе», если restock_pending</td></tr>
+<tr><td>cancelled</td><td>любой</td><td>клиент / админ / крон / Payme</td><td>«Отменён · возврат денег в пути / деньги возвращены»</td><td>«Деньги возвращены» при refund pending</td></tr>
+</table>
+
+<h2>Где статус мог застрять раньше и что починено</h2>
+<ul>
+<li>Неоплаченные заказы жили вечно → крон отменяет через 24 ч.</li>
+<li>Покупка помечала арендный экземпляр «продан» → теперь продаётся новая единица со склада, остаток списывается при оплате и возвращается при отмене.</li>
+<li>«Забрал у клиента» освобождал ячейку, хотя инструмент был у курьера → ячейка держится до «Инструмент в боксе».</li>
+<li>Отмена после оплаты не помнила о деньгах → refund_status pending/done + уведомление клиенту.</li>
+<li>Крон просрочки цеплял покупки → только аренды. Повторное подтверждение оплаты (ретрай Payme) не задваивает списание.</li>
+<li>Порядок кнопок админа проверяется бэкендом: нельзя «Доставлен» раньше «Передан курьеру».</li>
+</ul>
+</main></body></html>

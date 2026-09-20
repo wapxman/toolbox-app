@@ -13,6 +13,14 @@ class LegalLinks {
   static const String supportPhone = '+998 93 523 60 60';
 }
 
+/// Переключатели поведения приложения.
+class AppFlags {
+  /// true — регистрация по телефону на старте, каталог только после входа
+  /// (решение владельца 21.09.2026). false — гостевой каталог, вход при оформлении
+  /// (так требовал App Store, Guideline 5.1.1(v), сборка 1.0.5).
+  static const bool requireLoginAtStart = true;
+}
+
 class AppConstants {
   // Фолбэк, если у инструмента не пришла цена с бэкенда
   static const int basePricePerDay = 80000; // сум

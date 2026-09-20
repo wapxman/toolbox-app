@@ -30,7 +30,9 @@ class OrderLabels {
     final days = (r['days'] ?? 0) as int;
     final what = kind == 'buy' ? 'Покупка' : 'Аренда $days ${AppConstants.daysWord(days)}';
     final delivery = r['fulfillment'] == 'delivery';
-    final how = delivery ? 'Доставка' : 'Из бокса${cellNumber != null ? ', ячейка $cellNumber' : ''}';
+    final pickupCell = (r['pickup_cell'] as Map<String, dynamic>?)?['cell_number'];
+    final cellNo = kind == 'buy' ? pickupCell : cellNumber;
+    final how = delivery ? 'Доставка' : 'Из бокса${cellNo != null ? ', ячейка $cellNo' : ''}';
     return '$what · $how';
   }
 
@@ -40,12 +42,21 @@ class OrderLabels {
     final s = r['status'];
     final kind = r['kind'] ?? 'rent';
     final slot = r['delivery_slot_label']?.toString();
-    if (s == 'cancelled') return OrderStatusLabel('Отменён', AppTheme.textSecondary, gray);
+    if (s == 'cancelled') {
+      final rf = r['refund_status'];
+      final tail = rf == 'pending' ? ' · возврат денег в пути' : rf == 'done' ? ' · деньги возвращены' : '';
+      return OrderStatusLabel('Отменён$tail', AppTheme.textSecondary, gray);
+    }
     if (s == 'pending_payment') return OrderStatusLabel('Ждёт оплаты', amberFg, amber);
     if (s == 'pending_delivery') {
       final ds = r['delivery_status'];
+      if (ds == 'ready') {
+        final cellNo = (r['pickup_cell'] as Map<String, dynamic>?)?['cell_number'];
+        return OrderStatusLabel('Готов к выдаче${cellNo != null ? ' · ячейка $cellNo' : ''}', blueFg, blue);
+      }
       if (ds == 'dispatched') return OrderStatusLabel('Курьер в пути${slot != null ? ' · $slot' : ''}', blueFg, blue);
       if (ds == 'packed') return OrderStatusLabel('Собран${slot != null ? ' · $slot' : ''}', amberFg, amber);
+      if (kind == 'buy' && r['fulfillment'] != 'delivery') return OrderStatusLabel('Оплачен, кладём в бокс', amberFg, amber);
       return OrderStatusLabel('Оплачен, готовим${slot != null ? ' · $slot' : ''}', amberFg, amber);
     }
     if (s == 'completed') {

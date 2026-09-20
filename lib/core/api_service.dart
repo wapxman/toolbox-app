@@ -175,6 +175,12 @@ class ApiService {
     if (delivery != null) 'delivery': delivery,
   });
 
+  /// Покупка с самовывозом: открыть ячейку с готовым заказом.
+  Future<Map<String, dynamic>> pickupOrder(String id) => _post('/rentals/$id/pickup', {});
+
+  /// Контакты поддержки (телефон, Telegram, e-mail) из настроек.
+  Future<Map<String, dynamic>> getSupport() => _get('/settings/support');
+
   /// Отмена заказа клиентом (до передачи курьеру).
   Future<Map<String, dynamic>> cancelOrder(String id) => _post('/rentals/$id/cancel', {});
 

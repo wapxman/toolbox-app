@@ -119,7 +119,9 @@ class _OrderScreenState extends State<OrderScreen> {
             value: 'pickup',
             icon: Icons.inventory_2_outlined,
             title: 'Заберу из бокса',
-            subtitle: '$boxName${boxAddress.isNotEmpty ? ', $boxAddress' : ''}\nЯчейка откроется сразу после оплаты',
+            subtitle: isRent
+                ? '$boxName${boxAddress.isNotEmpty ? ', $boxAddress' : ''}\nЯчейка откроется сразу после оплаты'
+                : '$boxName${boxAddress.isNotEmpty ? ', $boxAddress' : ''}\nПоложим новый инструмент в ячейку и пришлём уведомление — откроете сами',
             price: 'бесплатно',
             priceColor: AppTheme.success,
           ),
@@ -173,7 +175,7 @@ class _OrderScreenState extends State<OrderScreen> {
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
             const SizedBox(height: 2),
             Text(
-              isRent ? '${AppConstants.formatPrice(dayPrice)} / день' : 'Покупка • ${AppConstants.formatPrice(salePrice)}',
+              isRent ? '${AppConstants.formatPrice(dayPrice)} / день' : 'Новый • ${AppConstants.formatPrice(salePrice)}',
               style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
             ),
           ])),
@@ -263,7 +265,7 @@ class _OrderScreenState extends State<OrderScreen> {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
         child: Column(children: [
-          _line(isRent ? '$_days ${AppConstants.daysWord(_days)} × ${AppConstants.formatPrice(dayPrice)}' : 'Инструмент',
+          _line(isRent ? '$_days ${AppConstants.daysWord(_days)} × ${AppConstants.formatPrice(dayPrice)}' : 'Новый инструмент',
               AppConstants.formatPrice(itemsFull)),
           if (discount > 0)
             _line('Скидка ${_days >= 7 ? '−35%' : '−20%'}', '−${AppConstants.formatPrice(discount)}', color: AppTheme.success),

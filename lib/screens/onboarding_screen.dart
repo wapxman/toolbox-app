@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
-import '../core/app_prefs.dart';
-import 'home/main_screen.dart';
+import 'auth/register_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -43,15 +42,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  /// После вступления пользователь попадает прямо в каталог, без регистрации.
-  /// Логин потребуется только при бронировании (Guideline 5.1.1(v)).
-  Future<void> _goToCatalog() async {
-    await AppPrefs.markIntroSeen();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
+  /// После вступления — регистрация по номеру телефона (решение владельца).
+  void _goToCatalog() {
+    Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const MainScreen()),
-      (_) => false,
+      MaterialPageRoute(builder: (_) => const RegisterScreen()),
     );
   }
 

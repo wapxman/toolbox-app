@@ -71,7 +71,9 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
     final brand = tool['brand'] ?? '';
     final category = tool['category'] ?? '';
     final dayPrice = (tool['day_price'] ?? 0) as int;
-    final salePrice = tool['sale_price'] as int?;
+    final stock = (tool['sale_stock'] ?? 0) as int;
+    final salePrice = (tool['sale_price'] as int?) != null && (tool['sale_price'] as int) > 0 ? tool['sale_price'] as int : null;
+    final canBuy = salePrice != null && stock > 0;
     final specs = tool['specs'] as Map<String, dynamic>? ?? {};
     final available = (tool['cell_status'] ?? tool['status'] ?? 'free') == 'free';
     final busyUntil = DateTime.tryParse(tool['busy_until']?.toString() ?? '')?.toLocal();
@@ -131,13 +133,19 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
           // Покупка
           if (salePrice != null)
             _block(
-              title: 'Покупка',
+              title: 'Покупка нового',
               icon: Icons.shopping_bag_outlined,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(AppConstants.formatPrice(salePrice),
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primary)),
+                Row(children: [
+                  Text(AppConstants.formatPrice(salePrice),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primary)),
+                  const Spacer(),
+                  Text(stock > 0 ? 'В наличии: $stock шт.' : 'Нет в наличии',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                          color: stock > 0 ? AppTheme.success : AppTheme.error)),
+                ]),
                 const SizedBox(height: 6),
-                _kv('Состояние', tool['sale_condition']?.toString() ?? 'Хорошее, б/у из проката'),
+                _kv('Состояние', (tool['sale_condition'] ?? '').toString().isNotEmpty ? tool['sale_condition'].toString() : 'Новый, в заводской упаковке'),
                 if ((tool['sale_kit'] ?? '').toString().isNotEmpty) _kv('Комплект', tool['sale_kit'].toString()),
                 if ((tool['sale_warranty'] ?? '').toString().isNotEmpty) _kv('Гарантия', tool['sale_warranty'].toString()),
               ]),
@@ -151,6 +159,12 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               _kv('Из бокса', 'бесплатно • $boxName${boxAddress.toString().isNotEmpty ? ', $boxAddress' : ''}'),
               _kv('Доставка по Ташкенту', '${AppConstants.formatPrice(_deliveryFee)} • сегодня или завтра'),
+              if (canBuy)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text('Покупка: новый инструмент со склада — привезём курьером или положим в ячейку бокса и сообщим.',
+                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.35)),
+                ),
             ]),
           ),
 
@@ -163,32 +177,12 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
           const SizedBox(height: 8),
         ]),
       ),
+      // Аренда — только если арендный экземпляр свободен; покупка — пока есть новые на складе.
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: available
-              ? Row(children: [
-                  Expanded(
-                    flex: salePrice != null ? 1 : 1,
-                    child: ElevatedButton(
-                      onPressed: () => _start('rent'),
-                      child: const Text('Арендовать'),
-                    ),
-                  ),
-                  if (salePrice != null) ...[
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => _start('buy'),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text('Купить за ${AppConstants.formatPrice(salePrice)}'),
-                        ),
-                      ),
-                    ),
-                  ],
-                ])
-              : Container(
+          child: (!available && !canBuy)
+              ? Container(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
@@ -197,7 +191,29 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
                   ),
                   child: Text('Сейчас занят — загляните позже',
                       style: TextStyle(fontSize: 14, color: AppTheme.textSecondary, fontWeight: FontWeight.w500)),
-                ),
+                )
+              : Row(children: [
+                  if (available)
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _start('rent'),
+                        child: const Text('Арендовать'),
+                      ),
+                    ),
+                  if (available && canBuy) const SizedBox(width: 10),
+                  if (canBuy)
+                    Expanded(
+                      child: available
+                          ? OutlinedButton(
+                              onPressed: () => _start('buy'),
+                              child: FittedBox(fit: BoxFit.scaleDown, child: Text('Купить за ${AppConstants.formatPrice(salePrice)}')),
+                            )
+                          : ElevatedButton(
+                              onPressed: () => _start('buy'),
+                              child: FittedBox(fit: BoxFit.scaleDown, child: Text('Купить новый за ${AppConstants.formatPrice(salePrice)}')),
+                            ),
+                    ),
+                ]),
         ),
       ),
     );

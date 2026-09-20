@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme.dart';
 import 'core/api_service.dart';
+import 'core/constants.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/home/main_screen.dart';
 
@@ -16,11 +16,11 @@ void main() async {
   );
   // Восстанавливаем сохранённый вход, чтобы не логиниться каждый раз через SMS
   await ApiService().loadToken();
-  // Вступление показываем только при самом первом запуске и только гостю.
-  // Каталог обязан открываться без регистрации (App Store Guideline 5.1.1(v)).
-  final prefs = await SharedPreferences.getInstance();
-  final seenIntro = prefs.getBool('seen_intro') ?? false;
-  runApp(TaketoolApp(showIntro: !ApiService().isLoggedIn && !seenIntro));
+  // Решение владельца (21.09.2026): регистрация по номеру телефона — на старте,
+  // до каталога. Без входа приложение показывает только приветствие/вход.
+  // AppFlags.requireLoginAtStart = false вернёт гостевой каталог (Apple 5.1.1(v)).
+  final loggedIn = ApiService().isLoggedIn;
+  runApp(TaketoolApp(showIntro: AppFlags.requireLoginAtStart ? !loggedIn : false));
 }
 
 class TaketoolApp extends StatelessWidget {

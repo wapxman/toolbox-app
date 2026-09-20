@@ -239,6 +239,8 @@ class _ShopScreenState extends State<ShopScreen> {
     final dayPrice = (t['day_price'] ?? 0) as int;
     final salePrice = t['sale_price'] as int?;
     final free = (t['cell_status'] ?? 'free') == 'free';
+    final stock = (t['sale_stock'] ?? 0) as int;
+    final buyMode = _mode == 'buy';
     final busyUntil = DateTime.tryParse(t['busy_until']?.toString() ?? '')?.toLocal();
     final busyText = busyUntil != null
         ? 'Занят до ${busyUntil.day.toString().padLeft(2, '0')}.${busyUntil.month.toString().padLeft(2, '0')}'
@@ -248,7 +250,7 @@ class _ShopScreenState extends State<ShopScreen> {
         : '${AppConstants.formatPrice(dayPrice)}/день';
     final small = _mode == 'buy'
         ? 'Аренда: ${AppConstants.formatPrice(dayPrice)}/день'
-        : (salePrice != null ? 'Купить: ${AppConstants.formatPrice(salePrice)}' : 'Только аренда');
+        : (salePrice != null && (t['sale_stock'] ?? 0) > 0 ? 'Купить новый: ${AppConstants.formatPrice(salePrice)}' : 'Только аренда');
 
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(
@@ -279,12 +281,13 @@ class _ShopScreenState extends State<ShopScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: free ? const Color(0xFFE6F7EE) : const Color(0xFFFDE8E8),
+              color: (buyMode ? stock > 0 : free) ? const Color(0xFFE6F7EE) : const Color(0xFFFDE8E8),
               borderRadius: BorderRadius.circular(999),
             ),
-            child: Text(free ? 'Свободен' : busyText,
+            child: Text(
+                buyMode ? (stock > 0 ? 'Новый · в наличии $stock шт.' : 'Нет в наличии') : (free ? 'Свободен' : busyText),
                 style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600,
-                    color: free ? AppTheme.success : AppTheme.error)),
+                    color: (buyMode ? stock > 0 : free) ? AppTheme.success : AppTheme.error)),
           ),
         ]),
       ),

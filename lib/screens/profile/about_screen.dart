@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
+import '../../widgets/support_links.dart';
 import '../../core/theme.dart';
 
 /// «О приложении»: версия, ссылки на политику конфиденциальности,
@@ -65,10 +66,13 @@ class _AboutScreenState extends State<AboutScreen> {
           _item(Icons.description_outlined, 'Пользовательское соглашение (оферта)',
               () => _open(LegalLinks.terms)),
           _item(Icons.language, 'Сайт taketool.uz', () => _open(LegalLinks.site)),
-          _item(Icons.mail_outline, 'Поддержка: ${LegalLinks.supportEmail}',
-              () => _open('mailto:${LegalLinks.supportEmail}')),
-          _item(Icons.phone_outlined, LegalLinks.supportPhone,
-              () => _open('tel:${LegalLinks.supportPhone.replaceAll(' ', '')}')),
+          const SizedBox(height: 16),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4),
+            child: Text('Поддержка', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          ),
+          const SizedBox(height: 8),
+          const Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: SupportButtons()),
           const SizedBox(height: 24),
           Text(
             '© ${DateTime.now().year} AB PARTNERS MChJ, Ташкент, Узбекистан',
