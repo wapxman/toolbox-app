@@ -1,6 +1,6 @@
 # ТЗ: Магазин, покупка и доставка — Taketool 1.1
 
-Версия 1.0 от 21.09.2026. Статус: **на утверждение**.
+Версия 1.1 от 21.09.2026. Статус: **реализовано в 1.1.0+9, ждёт утверждения APK**. Ниже — как сделано фактически (отличия от первоначального ТЗ помечены «⚠ реализация»).
 Макеты: канвас «Taketool: Магазин и доставка» (9 экранов).
 
 ## 1. Цель
@@ -89,47 +89,39 @@
 | `sale_warranty` | text, null | Гарантия |
 | `status` | text | Добавить значение `sold` |
 
-### 4.2 Новая таблица `orders`
+### 4.2 Заказы = таблица `rentals` (⚠ реализация)
+
+Отдельная таблица `orders` не создавалась: Payme и Click уже завязаны на `rentals.id`, поэтому поля заказа добавлены прямо в `rentals`. Дочерний заказ «вызов курьера» — строка с `kind = courier_return` и `parent_rental_id`. Ниже — фактические колонки.
 
 | Поле | Тип | Описание |
 |---|---|---|
-| `id` | uuid PK | |
-| `number` | bigint identity | Номер для людей («Заказ № 1042») |
-| `user_id` | uuid → users | |
-| `tool_id` | uuid → tools | |
-| `kind` | text | `rent` / `buy` |
+| `order_number` | bigint identity | Номер для людей («Заказ № 24») |
+| `kind` | text | `rent` / `buy` / `courier_return` |
 | `days` | int, null | Для аренды |
 | `fulfillment` | text | `pickup` / `delivery` |
-| `rental_id` | uuid → rentals, null | Создаётся при `kind=rent` |
+| `parent_rental_id` | uuid → rentals, null | Для `courier_return` — какая аренда возвращается |
 | `delivery_address` | text | |
 | `delivery_entrance`, `delivery_floor`, `delivery_apt` | text | |
 | `delivery_lat`, `delivery_lng` | numeric | |
-| `delivery_slot_start`, `delivery_slot_end` | timestamptz | |
+| `delivery_slot_start`, `delivery_slot_end`, `delivery_slot_label` | timestamptz, text | |
 | `recipient_phone` | text | |
 | `comment` | text | |
-| `courier_name`, `courier_phone`, `courier_car` | text | Заполняет админ |
+| `courier_name`, `courier_phone` | text | Заполняет админ |
 | `items_price` | int | Аренда до скидки или цена продажи |
 | `discount` | int | |
 | `delivery_fee` | int | 0 или 50 000 |
 | `total_price` | int | Сумма к оплате |
 | `payment_provider` | text | `payme` / `click` |
-| `status` | text | См. 4.4 |
+| `status` | text | Общий: `pending_payment`, `pending_delivery`, `active`, `overdue`, `completed`, `cancelled` |
+| `delivery_status` | text, null | `paid` → `packed` → `dispatched` → `delivered` (`picked_up` для возврата) |
 | `paid_at`, `packed_at`, `dispatched_at`, `delivered_at`, `cancelled_at` | timestamptz | |
-| `refund_status` | text, null | `pending` / `done` |
 | `created_at` | timestamptz | |
 
 Индексы: `(user_id, status)`, `(status, delivery_slot_start)`.
 
-### 4.3 Изменения в `rentals`
+### 4.3 Статусы
 
-| Поле | Описание |
-|---|---|
-| `order_id` uuid null | Ссылка на заказ |
-| `fulfillment` text default `pickup` | |
-| `return_method` text null | `box` / `courier` |
-| `return_order_id` uuid null | Заказ на вызов курьера при возврате |
-
-Статус `pending_delivery` добавляется: аренда оплачена, но ещё не передана. В `active` переводит курьер/админ при доставке.
+`pending_delivery` — оплачено, ждём курьера (аренда или покупка). В `active` (аренда) или `completed` (покупка) переводит админ кнопкой «Доставлен». `return_method` = `box` / `courier` проставляется при возврате.
 
 ### 4.4 Статусы `orders`
 
@@ -155,21 +147,21 @@ pending_payment → paid → packed → dispatched → delivered
 
 | Метод | Путь | Кто | Что делает |
 |---|---|---|---|
-| GET | `/api/tools` | все | Каталог с `sale_price`, `category`, `busy_until`, фильтры `?q=&category=&mode=rent|buy` |
+| GET | `/api/tools` | все | Каталог с `sale_price`, `busy_until`, фильтры `?q=&category=&mode=rent|buy` |
+| GET | `/api/tools/categories` | все | Категории для чипсов |
 | GET | `/api/settings/delivery` | все | Тариф, интервалы, полигон |
-| POST | `/api/orders` | юзер | Создать заказ (`tool_id, kind, days, fulfillment, provider, delivery{...}`). Возвращает заказ и то же, что `POST /rentals` для оплаты (ссылка Payme или счёт Click) |
-| GET | `/api/orders` | юзер | Свои заказы, `?status=active|history` |
-| GET | `/api/orders/:id` | юзер | Детали + таймлайн |
-| GET | `/api/orders/:id/payment-status` | юзер | Как у аренд |
-| POST | `/api/orders/:id/cancel` | юзер | Только до `dispatched` |
-| POST | `/api/rentals/:id/return-courier` | юзер | Создаёт заказ `kind=return`, `delivery_fee=50000`, оплата |
-| PATCH | `/api/admin/orders/:id` | админ (`X-Admin-Secret`) | Статус, курьер, `refund_status` |
-| POST | `/api/admin/orders/:id/open-cell` | админ | Открыть ячейку для сборки заказа |
+| POST | `/api/rentals` | юзер | ⚠ реализация: тот же эндпоинт, тело `{tool_id, kind, days, fulfillment, provider, delivery{address, entrance, floor, apt, phone, comment, slot{date,start,end}}}`. Ответ как раньше (ссылка Payme / счёт Click) |
+| GET | `/api/rentals/active` | юзер | Активные + в доставке |
+| GET | `/api/rentals/history` | юзер | Завершённые и отменённые |
+| GET | `/api/rentals/:id` | юзер | Детали + `courier_return` (активный вызов курьера) |
+| POST | `/api/rentals/:id/cancel` | юзер | Только до `dispatched`; деньги возвращает админ в кассе |
+| POST | `/api/rentals/:id/return-courier` | юзер | Дочерний заказ `kind=courier_return`, оплата тарифа доставки |
+| PATCH | `/api/admin/orders/:id` | админ (`X-Admin-Secret`) | `action`: `open_cell`, `packed`, `dispatched` (+курьер), `delivered`, `picked_up`, `cancel` |
 
 ### 5.2 Что меняется в существующем
 
 - `POST /api/rentals` остаётся для обратной совместимости старых версий приложения, внутри создаёт `order` с `fulfillment=pickup`.
-- `payme.js` и `click.js`: `merchant_trans_id`/`account.order_id` теперь ищут сначала в `orders`, потом в `rentals`. `PerformTransaction`/`Complete`:
+- `payme.js` и `click.js` после подтверждения зовут `lib/orders.confirmPayment`, который ветвится по `kind`/`fulfillment`:
   - `pickup + rent` → как сейчас: аренда `active`, ячейка `occupied`, замок открыт;
   - `pickup + buy` → заказ `paid`, замок открыт, инструмент `sold`, ячейка `free` после закрытия;
   - `delivery` → заказ `paid`, аренда `pending_delivery`, замок **не** открывается, уведомление админу.
@@ -183,7 +175,7 @@ Telegram-бот в группу операторов: «Новый заказ �
 ## 6. Админка (toolbox-admin)
 
 1. **Инструменты**: поля цены продажи, состояния, комплекта, гарантии.
-2. **Заказы** (новый раздел): список с фильтрами по статусу и дате интервала; карточка заказа: кнопки «Собран» (+ «Открыть ячейку»), «Передан курьеру» (поля курьера), «Доставлен», «Отменить», «Возврат сделан». Для возврата курьером: «Забрал у клиента» → аренда `completed`, ячейка ждёт возврата в бокс.
+2. **Доставка** (новый раздел `/orders`): заказы с доставкой, кнопки «Открыть ячейку», «Собран», «Передан курьеру» (имя и телефон), «Доставлен», «Забрал у клиента», «Отменить». Ходит на бэкенд через серверный прокси `/api/orders/[id]` — на Vercel админки нужна переменная `ADMIN_API_SECRET` (та же, что у бэкенда).
 3. **Настройки**: тариф доставки, интервалы, полигон (пока JSON-поле).
 4. Дашборд: выручка отдельно по аренде, продажам и доставке.
 
@@ -200,7 +192,7 @@ Telegram-бот в группу операторов: «Новый заказ �
 | 1 | Миграции, `GET /api/tools`, `orders` API, оплата через `orders` | 2 дня |
 | 2 | Админка: цены продажи, раздел заказов, Telegram-уведомление | 1 день |
 | 3 | Приложение: Магазин, карточка, доставка, оформление, заказы, возврат | 3 дня |
-| 4 | Прогон E2E: аренда из бокса, аренда с доставкой, покупка, возврат курьером, отмена, Payme и Click | 1 день |
+| 4 | Прогон E2E: аренда из бокса, аренда с доставкой, покупка, возврат курьером, отмена, Payme и Click | 1 день — 21.09 прогнан заказ №24: оформление → оплата → собран → курьер → доставлен → активная аренда |
 | 5 | Сборки, тест-треки, магазины | 1 день |
 
 ## 9. Открытые вопросы
