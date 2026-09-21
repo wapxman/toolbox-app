@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
+import '../screens/rental/address_picker_screen.dart';
 
-/// Данные формы доставки: адрес, подъезд/этаж/кв, телефон, комментарий, интервал.
+/// Данные формы доставки: точка на карте, адрес, подъезд/этаж/кв, телефон, комментарий, интервал.
 /// Используется и при заказе с доставкой, и при вызове курьера за инструментом.
 class DeliveryFormController {
   final address = TextEditingController();
@@ -11,6 +12,8 @@ class DeliveryFormController {
   final phone = TextEditingController();
   final comment = TextEditingController();
   Map<String, dynamic>? slot; // {date, start, end, label}
+  double? lat;
+  double? lng;
 
   void dispose() {
     for (final c in [address, entrance, floor, apt, phone, comment]) {
@@ -20,6 +23,7 @@ class DeliveryFormController {
 
   /// Текст ошибки или null, если всё заполнено.
   String? validate() {
+    if (lat == null || lng == null) return 'Укажите точку доставки на карте';
     if (address.text.trim().length < 5) return 'Укажите адрес доставки';
     if (phone.text.replaceAll(RegExp(r'\D'), '').length < 9) return 'Укажите телефон получателя';
     if (slot == null) return 'Выберите, когда привезти';
@@ -33,11 +37,9 @@ class DeliveryFormController {
         'apt': apt.text.trim(),
         'phone': phone.text.trim(),
         'comment': comment.text.trim(),
-        'slot': {
-          'date': slot?['date'],
-          'start': slot?['start'],
-          'end': slot?['end'],
-        },
+        if (lat != null) 'lat': lat,
+        if (lng != null) 'lng': lng,
+        'slot': {'date': slot?['date'], 'start': slot?['start'], 'end': slot?['end']},
       };
 
   String get slotLabel => slot?['label']?.toString() ?? '';
@@ -63,17 +65,54 @@ class _DeliveryFormState extends State<DeliveryForm> {
   DeliveryFormController get c => widget.controller;
 
   InputDecoration _dec(String label, {String? hint}) => InputDecoration(
-        labelText: label,
-        hintText: hint,
-        floatingLabelBehavior: FloatingLabelBehavior.auto,
+        labelText: label, hintText: hint, floatingLabelBehavior: FloatingLabelBehavior.auto,
       );
+
+  Future<void> _pickOnMap() async {
+    final res = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(builder: (_) => AddressPickerScreen(initialLat: c.lat, initialLng: c.lng)),
+    );
+    if (res == null || !mounted) return;
+    setState(() {
+      c.lat = (res['lat'] as num?)?.toDouble();
+      c.lng = (res['lng'] as num?)?.toDouble();
+      final addr = (res['address'] ?? '').toString();
+      if (addr.isNotEmpty) c.address.text = addr;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final available = widget.slots.where((s) => s['available'] == true).toList();
+    final hasPin = c.lat != null && c.lng != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Точка на карте — обязательна: закрывает споры о том, куда именно везти
+        GestureDetector(
+          onTap: _pickOnMap,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+              border: Border.all(color: hasPin ? AppTheme.success : AppTheme.primary, width: hasPin ? 1 : 1.5),
+              color: hasPin ? const Color(0xFFF0FAF5) : const Color(0xFFFFF8F8),
+            ),
+            child: Row(children: [
+              Icon(hasPin ? Icons.check_circle : Icons.map_outlined, color: hasPin ? AppTheme.success : AppTheme.primary),
+              const SizedBox(width: 10),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(hasPin ? 'Точка на карте выбрана' : 'Указать точку на карте',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                Text(hasPin ? 'Нажмите, чтобы поправить' : 'Курьер приедет ровно к этой точке',
+                    style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+              ])),
+              Icon(Icons.chevron_right, color: AppTheme.textHint),
+            ]),
+          ),
+        ),
+        const SizedBox(height: 10),
         TextField(
           controller: c.address,
           textCapitalization: TextCapitalization.sentences,
@@ -113,8 +152,7 @@ class _DeliveryFormState extends State<DeliveryForm> {
             crossAxisSpacing: 8,
             childAspectRatio: 3.4,
             children: available.map((s) {
-              final selected = c.slot != null &&
-                  c.slot!['date'] == s['date'] && c.slot!['start'] == s['start'];
+              final selected = c.slot != null && c.slot!['date'] == s['date'] && c.slot!['start'] == s['start'];
               return GestureDetector(
                 onTap: () => setState(() => c.slot = Map<String, dynamic>.from(s)),
                 child: Container(
@@ -122,24 +160,16 @@ class _DeliveryFormState extends State<DeliveryForm> {
                   decoration: BoxDecoration(
                     color: selected ? const Color(0xFFFFF3F3) : Colors.white,
                     borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                    border: Border.all(
-                      color: selected ? AppTheme.primary : AppTheme.border,
-                      width: selected ? 2 : 1,
-                    ),
+                    border: Border.all(color: selected ? AppTheme.primary : AppTheme.border, width: selected ? 2 : 1),
                   ),
-                  child: Text(
-                    s['label']?.toString() ?? '',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                    ),
-                  ),
+                  child: Text(s['label']?.toString() ?? '',
+                      style: TextStyle(fontSize: 13, fontWeight: selected ? FontWeight.w700 : FontWeight.w400)),
                 ),
               );
             }).toList(),
           ),
         const SizedBox(height: 6),
-        Text('Интервал «сегодня» доступен, если до его начала больше 2 часов.',
+        Text('Ежедневно, без выходных. Интервал «сегодня» доступен, если до его начала больше 2 часов.',
             style: TextStyle(fontSize: 12, color: AppTheme.textHint)),
       ],
     );

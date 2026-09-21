@@ -33,6 +33,7 @@ class ApiService {
 
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
+    'X-App-Version': ApiConfig.appVersion,
     if (_token != null) 'Authorization': 'Bearer $_token',
   };
 
@@ -166,6 +167,7 @@ class ApiService {
     required String fulfillment,
     String provider = 'payme',
     Map<String, dynamic>? delivery,
+    String? termsVersion,
   }) => _post('/rentals', {
     'tool_id': toolId,
     'kind': kind,
@@ -173,7 +175,16 @@ class ApiService {
     'fulfillment': fulfillment,
     'provider': provider,
     if (delivery != null) 'delivery': delivery,
+    // Согласие с офертой: бэкенд принимает только действующую редакцию и пишет журнал consents
+    if (termsVersion != null) 'terms_version': termsVersion,
   });
+
+  /// Оплатить уже созданный неоплаченный заказ (штраф за просрочку, повтор оплаты).
+  Future<Map<String, dynamic>> payOrder(String id, {String provider = 'payme'}) =>
+    _post('/rentals/$id/pay', {'provider': provider});
+
+  /// Действующая редакция оферты: {version, date, url, title}.
+  Future<Map<String, dynamic>> getTerms() => _get('/settings/terms');
 
   /// Покупка с самовывозом: открыть ячейку с готовым заказом.
   Future<Map<String, dynamic>> pickupOrder(String id) => _post('/rentals/$id/pickup', {});

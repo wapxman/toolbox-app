@@ -5,6 +5,7 @@ import '../../core/order_labels.dart';
 import '../../core/theme.dart';
 import '../../core/tool_photo.dart';
 import '../rental/courier_return_screen.dart';
+import '../rental/payment_screen.dart';
 import '../../widgets/support_links.dart';
 
 /// Детали заказа: аренда/покупка, из бокса/с доставкой.
@@ -30,6 +31,7 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
   Map<String, dynamic>? get courierReturn => r['courier_return'] as Map<String, dynamic>?;
 
   String get kind => r['kind'] ?? 'rent';
+  bool get isPenalty => kind == 'penalty';
   bool get isRent => kind == 'rent';
   bool get isDelivery => r['fulfillment'] == 'delivery';
   String get status => r['status'] ?? 'active';
@@ -83,7 +85,7 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
       canPop: false,
       onPopInvoked: (didPop) { if (!didPop) Navigator.pop(context, _changed); },
       child: Scaffold(
-        appBar: AppBar(title: Text(number != null ? 'Заказ № $number' : (isRent ? 'Аренда' : 'Покупка'))),
+        appBar: AppBar(title: Text(isPenalty ? 'Штраф № $number' : (number != null ? 'Заказ № $number' : (isRent ? 'Аренда' : 'Покупка')))),
         body: RefreshIndicator(
           onRefresh: _refresh,
           child: SingleChildScrollView(
@@ -151,7 +153,7 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
               ],
               if ((r['discount'] ?? 0) > 0) _row('Скидка', '−${AppConstants.formatPrice(r['discount'] as int)}'),
               if ((r['delivery_fee'] ?? 0) > 0) _row('Доставка', AppConstants.formatPrice(r['delivery_fee'] as int)),
-              _row('Оплачено', AppConstants.formatPrice((r['total_price'] ?? 0) as int)),
+              _row(status == 'pending_payment' ? 'К оплате' : 'Оплачено', AppConstants.formatPrice((r['total_price'] ?? 0) as int)),
               if ((r['overdue_fee'] ?? 0) > 0) _row('Штраф', AppConstants.formatPrice(r['overdue_fee'] as int)),
               if (!isDelivery) _row('Бокс', '${box['name'] ?? '—'}'),
               if (!isDelivery && (box['address'] ?? '') != '') _row('Адрес бокса', '${box['address']}'),
@@ -286,6 +288,22 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
         );
     final spinner = const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white));
 
+    if (isPenalty) {
+      if (status == 'pending_payment') {
+        w.add(Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: const Color(0xFFFDE8E8), borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+          child: Text('Штраф за просрочку по п. 4 оферты: начатые дни сверх срока × цена дня × 1,5. '
+              'До оплаты новые аренды недоступны.',
+              style: TextStyle(fontSize: 13, color: AppTheme.error, height: 1.4)),
+        ));
+        w.add(const SizedBox(height: 12));
+        w.add(btn(Text('Оплатить ${AppConstants.formatPrice((r['total_price'] ?? 0) as int)}'), _busy ? null : _payPenalty));
+        w.add(const SizedBox(height: 12));
+      }
+      w.add(const SupportButtons(caption: 'Вопросы по штрафу:'));
+      return w;
+    }
     if (status == 'pending_delivery') {
       final ds = r['delivery_status'];
       if (ds == 'ready') {
@@ -334,6 +352,20 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
       );
 
   // === Действия ===
+
+  Future<void> _payPenalty() async {
+    final paid = await Navigator.push<bool>(context, MaterialPageRoute(
+      builder: (_) => PaymentScreen(
+        toolId: r['tool_id']?.toString() ?? '',
+        toolName: tool['name'] ?? 'Инструмент',
+        kind: 'penalty',
+        totalPrice: (r['total_price'] ?? 0) as int,
+        existingOrderId: r['id'].toString(),
+      ),
+    ));
+    if (paid == true) { _changed = true; _toast('Штраф оплачен. Спасибо!'); }
+    await _refresh();
+  }
 
   Future<void> _pickup() async {
     final cellNo = (r['pickup_cell'] as Map<String, dynamic>?)?['cell_number'];
@@ -483,7 +515,8 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
       final res = await _api.returnRental(r['id'].toString());
       if (!mounted) return;
       final fee = (res['overdue_fee'] ?? 0) as int;
-      await showDialog(
+      final penaltyId = res['penalty_id']?.toString();
+      final payNow = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
         builder: (_) => AlertDialog(
@@ -491,13 +524,27 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
           title: Text(fee > 0 ? 'Возврат со штрафом' : 'Замок открыт', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
           content: Text(
             fee > 0
-                ? 'Инструмент принят. Штраф за просрочку: ${AppConstants.formatPrice(fee)}. Положите инструмент в ячейку и закройте дверцу.'
+                ? 'Инструмент принят. Положите его в ячейку и закройте дверцу. За просрочку выставлен счёт ${AppConstants.formatPrice(fee)} — до его оплаты новые аренды недоступны.'
                 : 'Положите инструмент в ячейку ${cell['cell_number'] ?? ''} и плотно закройте дверцу. Спасибо!',
             style: TextStyle(fontSize: 14, color: AppTheme.textSecondary, height: 1.45),
           ),
-          actions: [ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Готово'))],
+          actions: [
+            if (fee > 0 && penaltyId != null)
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Позже')),
+            ElevatedButton(onPressed: () => Navigator.pop(context, fee > 0 && penaltyId != null),
+                child: Text(fee > 0 && penaltyId != null ? 'Оплатить штраф' : 'Готово')),
+          ],
         ),
       );
+      if (!mounted) return;
+      if (payNow == true && penaltyId != null) {
+        await Navigator.push<bool>(context, MaterialPageRoute(
+          builder: (_) => PaymentScreen(
+            toolId: r['tool_id']?.toString() ?? '', toolName: tool['name'] ?? 'Инструмент',
+            kind: 'penalty', totalPrice: fee, existingOrderId: penaltyId,
+          ),
+        ));
+      }
       if (mounted) Navigator.pop(context, true);
     } on ApiException catch (e) {
       _toast(e.message);

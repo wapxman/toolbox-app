@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme.dart';
@@ -7,14 +8,17 @@ import '../../core/api_service.dart';
 import 'unlock_screen.dart';
 import 'order_placed_screen.dart';
 
-/// Оплата заказа. Работает для трёх случаев:
+/// Оплата заказа. Случаи:
 ///  - аренда/покупка из бокса   → после оплаты UnlockScreen (ячейка открыта)
 ///  - аренда/покупка с доставкой → после оплаты OrderPlacedScreen (ждём курьера)
 ///  - вызов курьера за инструментом (kind = courier_return, rentalId задан)
+///  - оплата существующего счёта (existingOrderId: штраф за просрочку, повторная попытка)
+/// Согласие с офертой: чекбокс снят по умолчанию, без него кнопка неактивна.
+/// Факт согласия (кто, когда, редакция) бэкенд пишет в consents при создании заказа.
 class PaymentScreen extends StatefulWidget {
   final String toolId;
   final String toolName;
-  final String kind;          // rent | buy | courier_return
+  final String kind;          // rent | buy | courier_return | penalty
   final int days;
   final String fulfillment;   // pickup | delivery
   final Map<String, dynamic>? delivery;
@@ -23,7 +27,8 @@ class PaymentScreen extends StatefulWidget {
   final int discount;
   final int deliveryFee;
   final int totalPrice;
-  final String? rentalId;     // для courier_return — родительская аренда
+  final String? rentalId;         // для courier_return — родительская аренда
+  final String? existingOrderId;  // оплатить уже созданный заказ (штраф)
 
   const PaymentScreen({
     super.key,
@@ -39,6 +44,7 @@ class PaymentScreen extends StatefulWidget {
     this.deliveryFee = 0,
     required this.totalPrice,
     this.rentalId,
+    this.existingOrderId,
   });
 
   @override
@@ -58,8 +64,29 @@ class _PaymentScreenState extends State<PaymentScreen> {
   bool _clickInvoice = false;
   Timer? _pollTimer;
 
+  Map<String, dynamic>? _terms;     // действующая редакция оферты
+  bool _termsAccepted = false;
+
   bool get isCourierReturn => widget.kind == 'courier_return';
+  bool get isPenalty => widget.kind == 'penalty';
   bool get isDelivery => widget.fulfillment == 'delivery';
+  bool get needsConsent => !isPenalty && widget.existingOrderId == null;
+
+  @override
+  void initState() {
+    super.initState();
+    _orderId = widget.existingOrderId;
+    if (needsConsent) _loadTerms();
+  }
+
+  Future<void> _loadTerms() async {
+    try {
+      final t = await _api.getTerms();
+      if (mounted) setState(() => _terms = t);
+    } catch (_) {
+      // без версии оферты бэкенд заказ не примет — покажем ошибку при оплате
+    }
+  }
 
   @override
   void dispose() {
@@ -69,10 +96,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   void _toast(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), duration: const Duration(seconds: 5)));
   }
 
   Future<Map<String, dynamic>> _create() {
+    if (widget.existingOrderId != null) {
+      return _api.payOrder(widget.existingOrderId!, provider: _selected);
+    }
     if (isCourierReturn) {
       return _api.returnByCourier(widget.rentalId!, provider: _selected, delivery: widget.delivery ?? {});
     }
@@ -83,22 +113,27 @@ class _PaymentScreenState extends State<PaymentScreen> {
       fulfillment: widget.fulfillment,
       provider: _selected,
       delivery: widget.delivery,
+      termsVersion: _terms?['version']?.toString(),
     );
   }
 
   Future<void> _pay() async {
     if (_processing) return;
+    if (needsConsent && !_termsAccepted) { _toast('Подтвердите согласие с офертой'); return; }
+    if (needsConsent && _terms == null) {
+      await _loadTerms();
+      if (_terms == null) { _toast('Не удалось загрузить оферту. Проверьте интернет.'); return; }
+    }
     setState(() => _processing = true);
     try {
-      if (_orderId == null) {
+      if (_orderId == null || widget.existingOrderId != null && _paymentUrl == null) {
         final res = await _create();
-        _orderId = res['rental']?['id']?.toString();
+        _orderId = res['rental']?['id']?.toString() ?? _orderId;
         _paymentUrl = res['payment_url']?.toString();
         _clickInvoice = res['click_invoice'] == true;
       }
       if (_orderId == null) throw ApiException(0, 'Не удалось создать заказ');
 
-      // Click метод 3: счёт уже в Click Up — открываем приложение Click и ждём подтверждение.
       if (_selected == 'click' && _clickInvoice) {
         _toast('Счёт отправлен в приложение Click. Подтвердите оплату.');
         if (_paymentUrl != null && _paymentUrl!.isNotEmpty && _paymentUrl != 'null') {
@@ -112,7 +147,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
         throw ApiException(0, 'Оплата временно недоступна, попробуйте позже');
       }
 
-      // Payme — Custom Tab; Click — встроенный WebView (иначе ссылку перехватывает Click Up).
       final uri = Uri.parse(_paymentUrl!);
       final primaryMode = _selected == 'click' ? LaunchMode.inAppWebView : LaunchMode.inAppBrowserView;
       bool opened = false;
@@ -143,6 +177,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
       if (res['paid'] == true) {
         _pollTimer?.cancel();
         if (!mounted) return;
+        if (isPenalty || widget.existingOrderId != null) {
+          Navigator.pop(context, true);
+          return;
+        }
         final Widget next = (isDelivery || isCourierReturn)
             ? OrderPlacedScreen(kind: widget.kind, toolName: widget.toolName,
                 slotLabel: res['delivery_slot_label']?.toString() ?? widget.slotLabel)
@@ -152,7 +190,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       } else if (res['status'] == 'cancelled') {
         _pollTimer?.cancel();
         if (!mounted) return;
-        setState(() { _waitingPayment = false; _orderId = null; _paymentUrl = null; });
+        setState(() { _waitingPayment = false; _orderId = widget.existingOrderId; _paymentUrl = null; });
         _toast('Оплата отменена');
         return;
       }
@@ -165,18 +203,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   String get _whatLabel {
+    if (isPenalty) return 'Штраф за просрочку аренды';
     if (isCourierReturn) return 'Вызов курьера за инструментом';
-    final what = widget.kind == 'buy' ? 'Покупка' : 'Аренда ${widget.days} ${AppConstants.daysWord(widget.days)}';
+    final what = widget.kind == 'buy' ? 'Покупка нового' : 'Аренда ${widget.days} ${AppConstants.daysWord(widget.days)}';
     final how = isDelivery ? 'доставка' : 'из бокса';
     return '$what • $how';
   }
 
+  bool get _canPay => !_processing && (!needsConsent || _termsAccepted);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Оплата')),
+      appBar: AppBar(title: Text(isPenalty ? 'Оплата штрафа' : 'Оплата')),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Container(
@@ -192,9 +233,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   Text(widget.slotLabel!, style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
                 ],
                 const SizedBox(height: 10),
-                if (!isCourierReturn) _line(widget.kind == 'buy' ? 'Инструмент' : 'Аренда', AppConstants.formatPrice(widget.itemsPrice)),
+                if (!isCourierReturn && !isPenalty) _line(widget.kind == 'buy' ? 'Инструмент' : 'Аренда', AppConstants.formatPrice(widget.itemsPrice)),
                 if (widget.discount > 0) _line('Скидка', '−${AppConstants.formatPrice(widget.discount)}', color: AppTheme.success),
                 if (widget.deliveryFee > 0) _line(isCourierReturn ? 'Выезд курьера' : 'Доставка', AppConstants.formatPrice(widget.deliveryFee)),
+                if (isPenalty) _line('Начатые дни сверх срока × цена дня × 1,5', ''),
                 const Padding(padding: EdgeInsets.symmetric(vertical: 6), child: Divider(height: 1)),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   Text('К оплате', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
@@ -209,22 +251,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
             _paymentOption('payme', 'Payme', Icons.account_balance_wallet, const Color(0xFF33CCCC)),
             const SizedBox(height: 10),
             _paymentOption('click', 'Click', Icons.touch_app, const Color(0xFF00AAFF)),
-            const Spacer(),
+            if (needsConsent) ...[
+              const SizedBox(height: 20),
+              _consentBox(),
+            ],
+            const SizedBox(height: 28),
             if (_waitingPayment && _timedOut) ...[
               Center(child: Column(children: [
                 Icon(Icons.access_time, size: 40, color: AppTheme.textSecondary),
                 const SizedBox(height: 12),
                 const Text('Оплата пока не подтвердилась', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text(
-                    'Если Вы уже оплатили — статус обновится сам, деньги не потеряются. '
-                    'Можно попробовать оплатить ещё раз или вернуться позже.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                  ),
-                ),
+                Text('Если Вы уже оплатили — статус обновится сам, деньги не потеряются. Можно попробовать оплатить ещё раз или вернуться позже.',
+                    textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
                 const SizedBox(height: 16),
                 OutlinedButton(
                   onPressed: () {
@@ -237,7 +276,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 const SizedBox(height: 8),
                 TextButton(onPressed: _reopen, child: const Text('Открыть оплату ещё раз')),
               ])),
-              const SizedBox(height: 16),
             ] else if (_waitingPayment) ...[
               Center(child: Column(children: [
                 const CircularProgressIndicator(color: AppTheme.primary),
@@ -246,32 +284,69 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 const SizedBox(height: 8),
                 TextButton(onPressed: _reopen, child: const Text('Открыть оплату ещё раз')),
               ])),
-              const SizedBox(height: 16),
             ] else ...[
               ElevatedButton(
-                onPressed: _processing ? null : _pay,
+                onPressed: _canPay ? _pay : null,
                 child: _processing
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : Text('Оплатить ${AppConstants.formatPrice(widget.totalPrice)}'),
               ),
-              const SizedBox(height: 16),
             ],
+            const SizedBox(height: 8),
           ]),
         ),
       ),
     );
   }
 
+  Widget _consentBox() {
+    final date = (_terms?['date'] ?? '').toString();
+    final url = (_terms?['url'] ?? LegalLinks.terms).toString();
+    final link = TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600, decoration: TextDecoration.underline, decorationColor: AppTheme.primary);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(6, 6, 12, 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        border: Border.all(color: _termsAccepted ? AppTheme.border : AppTheme.primary, width: _termsAccepted ? 1 : 1.5),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Checkbox(
+          value: _termsAccepted,
+          activeColor: AppTheme.primary,
+          onChanged: _waitingPayment ? null : (v) => setState(() => _termsAccepted = v ?? false),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text.rich(
+              TextSpan(
+                style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary, height: 1.4),
+                children: [
+                  const TextSpan(text: 'Я прочитал(а) и принимаю '),
+                  TextSpan(
+                    text: 'Пользовательское соглашение (публичную оферту)',
+                    style: link,
+                    recognizer: TapGestureRecognizer()..onTap = () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+                  ),
+                  TextSpan(text: date.isNotEmpty ? ' в редакции от $date' : ''),
+                  const TextSpan(text: ', включая правила штрафа за просрочку, ответственность за утрату и условия доставки и продажи.'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
+
   Future<void> _reopen() async {
-    if (_paymentUrl != null) {
-      await launchUrl(Uri.parse(_paymentUrl!), mode: LaunchMode.inAppBrowserView);
-    }
+    if (_paymentUrl != null) await launchUrl(Uri.parse(_paymentUrl!), mode: LaunchMode.inAppBrowserView);
   }
 
   Widget _line(String k, String v, {Color? color}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(k, style: TextStyle(fontSize: 13, color: color ?? AppTheme.textSecondary)),
+          Flexible(child: Text(k, style: TextStyle(fontSize: 13, color: color ?? AppTheme.textSecondary))),
           Text(v, style: TextStyle(fontSize: 13, color: color ?? AppTheme.textPrimary)),
         ]),
       );
@@ -279,7 +354,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Widget _paymentOption(String value, String label, IconData icon, Color color) {
     final isSelected = _selected == value;
     return GestureDetector(
-      onTap: _waitingPayment ? null : () => setState(() => _selected = value),
+      onTap: _waitingPayment ? null : () => setState(() { _selected = value; if (widget.existingOrderId != null) _paymentUrl = null; }),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(

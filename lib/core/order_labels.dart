@@ -28,6 +28,7 @@ class OrderLabels {
   static String kindLine(Map<String, dynamic> r, {dynamic cellNumber}) {
     final kind = r['kind'] ?? 'rent';
     final days = (r['days'] ?? 0) as int;
+    if (kind == 'penalty') return 'Штраф за просрочку аренды';
     final what = kind == 'buy' ? 'Покупка' : 'Аренда $days ${AppConstants.daysWord(days)}';
     final delivery = r['fulfillment'] == 'delivery';
     final pickupCell = (r['pickup_cell'] as Map<String, dynamic>?)?['cell_number'];
@@ -46,6 +47,11 @@ class OrderLabels {
       final rf = r['refund_status'];
       final tail = rf == 'pending' ? ' · возврат денег в пути' : rf == 'done' ? ' · деньги возвращены' : '';
       return OrderStatusLabel('Отменён$tail', AppTheme.textSecondary, gray);
+    }
+    if (kind == 'penalty') {
+      if (s == 'pending_payment') return OrderStatusLabel('Не оплачен · новые аренды закрыты', AppTheme.error, red, danger: true);
+      if (s == 'completed') return OrderStatusLabel('Штраф оплачен', AppTheme.success, green);
+      return OrderStatusLabel('Штраф списан', AppTheme.textSecondary, gray);
     }
     if (s == 'pending_payment') return OrderStatusLabel('Ждёт оплаты', amberFg, amber);
     if (s == 'pending_delivery') {

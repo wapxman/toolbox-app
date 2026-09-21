@@ -1,5 +1,7 @@
 class ApiConfig {
   static const String baseUrl = 'https://toolbox-backend-eight.vercel.app/api';
+  /// Уходит в заголовке X-App-Version — попадает в журнал согласий с офертой
+  static const String appVersion = '1.1.2+11';
   static const Duration timeout = Duration(seconds: 15);
 }
 
