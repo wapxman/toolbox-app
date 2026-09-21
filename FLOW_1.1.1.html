@@ -27,7 +27,7 @@ table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid 
 </style>
 </head>
 <body><main>
-<h1>Taketool 1.1.1 — путь клиента от регистрации до получения или возврата</h1>
+<h1>Taketool 1.1.2 — путь клиента от регистрации до получения или возврата</h1>
 <p class="sub">Ветки: аренда / покупка × из бокса / доставка. В скобках — статусы в базе: <code>status</code> / <code>delivery_status</code>. Кто действует: <span class="who">клиент</span>, <span class="who c">Payme/Click</span>, <span class="who b">админ</span>, <span class="who a">крон</span>.</p>
 
 <div class="lane"><h3>0. Вход (одинаково для всех веток)</h3>
@@ -49,8 +49,8 @@ table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid 
 <div class="lane"><h3>2. Оформление (экран «Аренда» или «Покупка») → Оплата</h3>
 <div class="steps">
 <div class="step"><span class="who">клиент</span><b>Срок (только аренда)</b><small>1–30 дней, −20% от 3, −35% от 7</small></div><div class="arrow">→</div>
-<div class="step"><span class="who">клиент</span><b>Как получить</b><small>«Заберу из бокса» — 0 сўм · «Доставка курьером» — 50 000, адрес + интервал (сегодня/завтра, 4-часовые окна)</small></div><div class="arrow">→</div>
-<div class="step"><span class="who">клиент</span><b>Оплата Payme / Click</b><small>Заказ создан <span class="st">pending_payment</span>. Ячейка и остаток НЕ резервируются до оплаты</small></div><div class="arrow">→</div>
+<div class="step"><span class="who">клиент</span><b>Как получить</b><small>«Заберу из бокса» — 0 сўм · «Доставка курьером» — 50 000: обязательная точка на Яндекс-карте (пин, адрес подставляется геокодером), подъезд/этаж/кв, интервал (ежедневно 10–14 / 14–18 / 18–22, «сегодня» при запасе &gt; 2 ч)</small></div><div class="arrow">→</div>
+<div class="step"><span class="who">клиент</span><b>Чекбокс оферты (снят по умолчанию) → Оплата Payme / Click</b><small>Без галочки кнопка неактивна. Бэкенд принимает только действующую редакцию (<code>terms_version</code>) и пишет запись в <code>consents</code>: кто, когда, редакция, заказ, IP, версия приложения. Заказ создан <span class="st">pending_payment</span>. Ячейка и остаток НЕ резервируются до оплаты</small></div><div class="arrow">→</div>
 <div class="step"><span class="who c">Payme/Click</span><b>Подтверждение</b><small>Webhook → <code>confirmPayment</code>. Не оплачен 24 ч → <span class="who a">крон</span> ставит <span class="st">cancelled</span></small></div>
 </div></div>
 
@@ -60,8 +60,9 @@ table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid 
 <div class="steps">
 <div class="step"><span class="who c">оплата</span><b>Замок открыт сразу</b><small>ячейка <code>occupied</code>, срок идёт с оплаты</small><span class="st">active</span></div><div class="arrow">→</div>
 <div class="step"><span class="who">клиент</span><b>Пользуется, может продлить</b><small>«Продлить» — доплата по тем же скидкам</small><span class="st">active</span></div><div class="arrow">→</div>
-<div class="step"><span class="who a">крон 08:00</span><b>Срок вышел</b><small>уведомление со штрафом; штраф считается при возврате: дни сверх срока × цена дня × 1,5 (начатый день = день)</small><span class="st">overdue</span></div><div class="arrow">→</div>
-<div class="step"><span class="who">клиент</span><b>Возврат: «Сдать в бокс»</b><small>ячейка открывается, кладёт инструмент; ячейка <code>free</code></small><span class="st">completed</span></div>
+<div class="step"><span class="who a">крон 08:00</span><b>Срок вышел</b><small>уведомление; штраф считается при возврате: начатые дни сверх срока × цена дня (со скидкой) × 1,5</small><span class="st">overdue</span></div><div class="arrow">→</div>
+<div class="step"><span class="who">клиент</span><b>Возврат: «Сдать в бокс»</b><small>ячейка открывается, кладёт инструмент; ячейка <code>free</code>. Если была просрочка — выставляется <b>счёт на штраф</b> (отдельный заказ <code>kind=penalty</code>, «Оплатить штраф» сразу или позже в «Заказах»)</small><span class="st">completed (+ penalty: pending_payment)</span></div><div class="arrow">→</div>
+<div class="step"><span class="who">клиент</span><b>Оплата штрафа Payme / Click</b><small>Пока счёт не оплачен — POST /rentals для аренды отвечает 402, покупка не ограничена. Счёт не протухает и клиентом не отменяется; админ может «Списать штраф»</small><span class="st">penalty: completed</span></div>
 <div class="step"><span class="who">клиент</span><b>или «Вызвать курьера» (50 000)</b><small>см. ветку D, шаги возврата</small></div>
 </div></div>
 
@@ -117,6 +118,8 @@ table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid 
 <tr><td>pending_delivery</td><td>dispatched</td><td>админ</td><td>«Курьер в пути», имя/телефон курьера, отмена недоступна</td><td>Доставлен / Забрал у клиента</td></tr>
 <tr><td>completed</td><td>delivered / picked_up / —</td><td>клиент (бокс/выдача) или админ</td><td>«Возвращён» / «Куплен», штраф если был</td><td>«Инструмент в боксе», если restock_pending</td></tr>
 <tr><td>cancelled</td><td>любой</td><td>клиент / админ / крон / Payme</td><td>«Отменён · возврат денег в пути / деньги возвращены»</td><td>«Деньги возвращены» при refund pending</td></tr>
+<tr><td>penalty: pending_payment</td><td>—</td><td>возврат просроченной аренды (клиент или «Забрал у клиента»)</td><td>«Штраф · не оплачен · новые аренды закрыты», кнопка «Оплатить»</td><td>«Списать штраф» в «Арендах» (фильтр «Штрафы»)</td></tr>
+<tr><td>penalty: completed</td><td>—</td><td>оплата Payme/Click</td><td>«Штраф оплачен», аренды снова доступны</td><td>—</td></tr>
 </table>
 
 <h2>Где статус мог застрять раньше и что починено</h2>
@@ -127,5 +130,8 @@ table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid 
 <li>Отмена после оплаты не помнила о деньгах → refund_status pending/done + уведомление клиенту.</li>
 <li>Крон просрочки цеплял покупки → только аренды. Повторное подтверждение оплаты (ретрай Payme) не задваивает списание.</li>
 <li>Порядок кнопок админа проверяется бэкендом: нельзя «Доставлен» раньше «Передан курьеру».</li>
+<li>Штраф раньше «считался и забывался» → теперь отдельный счёт с блокировкой новых аренд до оплаты.</li>
+<li>Согласие с офертой раньше «считалось» по факту регистрации → теперь чекбокс на каждом заказе и журнал согласий в базе.</li>
+<li>Ячейка, занятая без заказа (ручная правка базы), → ежедневная сверка ячеек с живыми заказами.</li>
 </ul>
 </main></body></html>
