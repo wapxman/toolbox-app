@@ -24,7 +24,9 @@ void main() {
     // приветствия и онбординга там нет (Guideline 5.1.1(v)). Кадры с ними
     // показывали бы экраны, до которых ревьюер физически не дойдёт.
     await tester.pumpWidget(const TaketoolApp());
-    await settle(tester, 8000);
+    // Тайлы Яндекс-карты тянутся из сети уже после первого кадра: при 8 секундах
+    // в снимок попадала пустая серая сетка вместо города.
+    await settle(tester, 30000);
     await shot(tester, '01_map');
 
     // Магазин — главная новинка версии. Долгая пауза ради фотографий
@@ -35,23 +37,27 @@ void main() {
     await shot(tester, '02_shop');
 
     // Карточка инструмента: цена аренды, цена покупки, доставка.
-    // Именно .first: «Перфоратор» встречается и в названии, и в строке
-    // категории «Einhell • Перфораторы» — без уточнения два совпадения.
-    await tester.tap(find.textContaining('Перфоратор').first);
-    await settle(tester, 6000);
+    // Ищем по артикулу, а не по слову «Перфоратор»: им подписан ещё и фильтр
+    // категорий над списком, и первым совпадением тест жал именно на фильтр.
+    await tester.tap(find.textContaining('TC-RH 800').first);
+    await settle(tester, 8000);
     await shot(tester, '03_tool');
 
-    await tester.pageBack();
-    await settle(tester, 2000);
+    // Возврат не через pageBack, а перезапуском дерева: так сбрасываются
+    // и стек навигации, и выбранный фильтр категории.
+    await tester.pumpWidget(const TaketoolApp());
+    await settle(tester, 4000);
+    await tester.tap(find.text('Магазин'));
+    await settle(tester, 8000);
 
     // Режим «Покупка» — продажа новых единиц со склада.
     await tester.tap(find.text('Покупка'));
-    await settle(tester, 12000);
+    await settle(tester, 15000);
     await shot(tester, '04_buy');
 
     // Каталог бокса со свободными ячейками — через карту.
-    await tester.tap(find.text('Главная'));
-    await settle(tester, 3000);
+    await tester.pumpWidget(const TaketoolApp());
+    await settle(tester, 20000);
     await tester.tap(find.text('Mega Planet ТЦ'));
     await settle(tester, 15000);
     await shot(tester, '05_box');
