@@ -45,6 +45,8 @@ void main() {
 
     // Возврат не через pageBack, а перезапуском дерева: так сбрасываются
     // и стек навигации, и выбранный фильтр категории.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await settle(tester, 500);
     await tester.pumpWidget(const TaketoolApp());
     await settle(tester, 4000);
     await tester.tap(find.text('Магазин'));
@@ -56,6 +58,10 @@ void main() {
     await shot(tester, '04_buy');
 
     // Каталог бокса со свободными ячейками — через карту.
+    // Пустой кадр перед перезапуском обязателен: без него Flutter переиспользует
+    // прежнее дерево вместе со стеком навигации, и вкладки остаются недоступны.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await settle(tester, 500);
     await tester.pumpWidget(const TaketoolApp());
     await settle(tester, 20000);
     await tester.tap(find.text('Mega Planet ТЦ'));
