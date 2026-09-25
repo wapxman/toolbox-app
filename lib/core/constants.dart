@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 class ApiConfig {
   static const String baseUrl = 'https://toolbox-backend-eight.vercel.app/api';
   /// Уходит в заголовке X-App-Version — попадает в журнал согласий с офертой
@@ -18,9 +20,13 @@ class LegalLinks {
 /// Переключатели поведения приложения.
 class AppFlags {
   /// true — регистрация по телефону на старте, каталог только после входа
-  /// (решение владельца 21.09.2026). false — гостевой каталог, вход при оформлении
-  /// (так требовал App Store, Guideline 5.1.1(v), сборка 1.0.5).
-  static const bool requireLoginAtStart = true;
+  /// (решение владельца 21.09.2026). false — гостевой каталог, вход при оформлении.
+  ///
+  /// На iOS всегда false: App Store уже отклонял сборку 1.0.5 (01.09.2026) по
+  /// Guideline 5.1.1(v) именно за вход до каталога — «Registration can only be
+  /// required for account-based features like adding to cart or checking out».
+  /// Android остаётся по решению владельца.
+  static bool get requireLoginAtStart => !Platform.isIOS;
 }
 
 class AppConstants {
