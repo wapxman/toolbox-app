@@ -20,67 +20,53 @@ void main() {
   }
 
   testWidgets('walk through screens', (tester) async {
-    await tester.pumpWidget(const TaketoolApp(showIntro: true));
-    await shot(tester, '01_welcome');
+    // Снимаем гостевой путь: на iOS приложение открывается сразу каталогом,
+    // приветствия и онбординга там нет (Guideline 5.1.1(v)). Кадры с ними
+    // показывали бы экраны, до которых ревьюер физически не дойдёт.
+    await tester.pumpWidget(const TaketoolApp());
+    await settle(tester, 8000);
+    await shot(tester, '01_map');
 
-    await tester.tap(find.text('Начать'));
-    await settle(tester);
-    await shot(tester, '02_onboarding_1');
-    await tester.tap(find.text('Далее'));
-    await settle(tester);
-    await tester.tap(find.text('Далее'));
-    await settle(tester);
-    await shot(tester, '03_onboarding_3');
-    await tester.tap(find.text('Начать'));
-    await settle(tester);
-    await shot(tester, '04_after_onboarding');
+    // Магазин — главная новинка версии. Долгая пауза ради фотографий
+    // инструментов: они тянутся с CloudFront, и при меньшем ожидании в кадр
+    // попадают пустые плашки. Проверено на прошлом наборе: 8 секунд мало.
+    await tester.tap(find.text('Магазин'));
+    await settle(tester, 15000);
+    await shot(tester, '02_shop');
 
-    // Входим демо-аккаунтом ревьюера — тем же, что указан в App Review
-    // Information. Без токена «Профиль» и «Аренды» показывают ошибку загрузки,
-    // и такие кадры в App Store отправлять нельзя.
+    // Карточка инструмента: цена аренды, цена покупки, доставка.
+    // Именно .first: «Перфоратор» встречается и в названии, и в строке
+    // категории «Einhell • Перфораторы» — без уточнения два совпадения.
+    await tester.tap(find.textContaining('Перфоратор').first);
+    await settle(tester, 6000);
+    await shot(tester, '03_tool');
+
+    await tester.pageBack();
+    await settle(tester, 2000);
+
+    // Режим «Покупка» — продажа новых единиц со склада.
+    await tester.tap(find.text('Покупка'));
+    await settle(tester, 12000);
+    await shot(tester, '04_buy');
+
+    // Каталог бокса со свободными ячейками — через карту.
+    await tester.tap(find.text('Главная'));
+    await settle(tester, 3000);
+    await tester.tap(find.text('Mega Planet ТЦ'));
+    await settle(tester, 15000);
+    await shot(tester, '05_box');
+
+    // Профиль снимаем только после входа демо-аккаунтом ревьюера: у гостя
+    // там приглашение войти, а такой кадр в App Store отправлять незачем.
     await ApiService().verify('+998900000001', '1234');
-
-    // Главный экран с темой приложения и без отладочной ленты — иначе кадры
-    // уходят в App Store с плашкой DEBUG и чужим оформлением.
     await tester.pumpWidget(MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const MainScreen(),
     ));
     await settle(tester, 6000);
-    await shot(tester, '05_map');
-
-    // Каталог бокса — четыре инструмента с ценами за день. Раньше здесь
-    // снимался поиск, но он отдаёт максимум одну позицию, и кадр выходил
-    // пустым. Карточка бокса показывает весь ассортимент.
-    await tester.tap(find.text('Mega Planet ТЦ'));
-    // Долгая пауза не ради верстки, а ради фотографий инструментов: четыре
-    // картинки по 600 пикселей тянутся с CloudFront, и при меньшем ожидании
-    // в кадр попадают пустые плашки вместо фото. Проверено: 8 секунд мало.
-    await settle(tester, 15000);
-    await shot(tester, '06_box');
-
-    // Карточка инструмента с ценой и бронированием.
-    // Именно .first: «Перфоратор» встречается и в названии, и в категории
-    // «Einhell • Перфораторы», без уточнения находится два совпадения.
-    await tester.tap(find.textContaining('Перфоратор').first);
-    await settle(tester, 6000);
-    await shot(tester, '07_tool');
-
-    // Возвращаемся к главному экрану: инструмент -> бокс -> карта.
-    await tester.pageBack();
-    await settle(tester, 1500);
-    await tester.pageBack();
-    await settle(tester, 1500);
-
     await tester.tap(find.text('Профиль'));
-    await settle(tester, 2500);
-    await shot(tester, '08_profile');
-    // Сканер открываем, чтобы экран был проверен, но снимок для App Store
-    // здесь не делаем: в симуляторе нет камеры, и вместо видоискателя
-    // выводится «Нет доступа к камере». Такой кадр можно снять только
-    // на живом устройстве.
-    await tester.tap(find.byIcon(Icons.qr_code_scanner));
     await settle(tester, 3000);
+    await shot(tester, '06_profile');
   });
 }
