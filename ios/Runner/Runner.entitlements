@@ -4,7 +4,8 @@
 <dict>
 	<!-- Universal Links: QR на шкафу (https://taketool.uz/dl/box?b=<uuid>) должен
 	     открывать приложение, а не страницу загрузки, если оно уже установлено.
-	     Оба хоста нужны: apex отдаёт 308 на www, iOS проверяет каждый отдельно.
+	     Оба хоста нужны: iOS проверяет каждый отдельно. Редирект apex->www снят
+	     именно поэтому — проверка .well-known не ходит по редиректам.
 	     Подтверждение лежит на сайте: /.well-known/apple-app-site-association -->
 	<key>com.apple.developer.associated-domains</key>
 	<array>
