@@ -1,9 +1,9 @@
-import 'dart:io' show Platform;
-
 class ApiConfig {
   static const String baseUrl = 'https://toolbox-backend-eight.vercel.app/api';
-  /// Уходит в заголовке X-App-Version — попадает в журнал согласий с офертой
-  static const String appVersion = '1.1.2+11';
+  /// Уходит в заголовке X-App-Version — попадает в журнал согласий с офертой.
+  /// ⚠️ Держать в соответствии с version в pubspec.yaml: иначе в журнале
+  /// окажется версия, которой у пользователя нет (так было с 1.1.2+11 при 1.1.3+12).
+  static const String appVersion = '1.1.4+13';
   static const Duration timeout = Duration(seconds: 15);
 }
 
@@ -19,14 +19,20 @@ class LegalLinks {
 
 /// Переключатели поведения приложения.
 class AppFlags {
-  /// true — регистрация по телефону на старте, каталог только после входа
-  /// (решение владельца 21.09.2026). false — гостевой каталог, вход при оформлении.
+  /// true — регистрация по телефону на старте, каталог только после входа.
+  /// false — гостевой каталог, вход просим при оформлении аренды.
   ///
-  /// На iOS всегда false: App Store уже отклонял сборку 1.0.5 (01.09.2026) по
-  /// Guideline 5.1.1(v) именно за вход до каталога — «Registration can only be
-  /// required for account-based features like adding to cart or checking out».
-  /// Android остаётся по решению владельца.
-  static bool get requireLoginAtStart => !Platform.isIOS;
+  /// 21.09.2026 владелец включил регистрацию на старте для Android.
+  /// 08.10.2026 владелец отменил это решение и велел открыть каталог гостям
+  /// на обеих платформах. Причина — цифры воронки за 28 дней:
+  /// 3 650 человек открыли карточку в Play → 38 установили (1 %, норма 20–30 %)
+  /// → 1 запустил приложение. Люди упирались в «Введите номер телефона»,
+  /// не увидев ни одного инструмента.
+  ///
+  /// На iOS иначе и нельзя: App Store отклонял сборку 1.0.5 (01.09.2026) по
+  /// Guideline 5.1.1(v) — «Registration can only be required for account-based
+  /// features like adding to cart or checking out».
+  static bool get requireLoginAtStart => false;
 }
 
 class AppConstants {

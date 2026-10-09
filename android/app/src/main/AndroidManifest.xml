@@ -43,6 +43,20 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="taketool" android:host="payment"/>
             </intent-filter>
+            <!-- App Links: QR на шкафу ведёт на https://taketool.uz/dl/box?b=<uuid бокса>.
+                 Если приложение установлено — открываем сразу экран бокса, а не магазин.
+                 autoVerify заставляет Android сверить подпись приложения с файлом
+                 /.well-known/assetlinks.json на сайте; там лежат ОБА отпечатка —
+                 ключа Google (им подписаны установки из Play) и нашего ключа загрузки.
+                 Оба хоста нужны: apex отдаёт 308 на www, а проверка идёт по каждому
+                 хосту отдельно. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="taketool.uz" android:pathPrefix="/dl/box"/>
+                <data android:scheme="https" android:host="www.taketool.uz" android:pathPrefix="/dl/box"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

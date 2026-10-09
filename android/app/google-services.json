@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1074770725303",
+    "project_id": "taketool-bcdb2",
+    "storage_bucket": "taketool-bcdb2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1074770725303:android:6a7435aa721db143d40032",
+        "android_client_info": {
+          "package_name": "uz.taketool.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8y9lB1eOG9p_BITbC1lDURNCYxWwrYuU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

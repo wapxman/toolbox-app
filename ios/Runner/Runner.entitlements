@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Universal Links: QR на шкафу (https://taketool.uz/dl/box?b=<uuid>) должен
+	     открывать приложение, а не страницу загрузки, если оно уже установлено.
+	     Оба хоста нужны: apex отдаёт 308 на www, iOS проверяет каждый отдельно.
+	     Подтверждение лежит на сайте: /.well-known/apple-app-site-association -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:taketool.uz</string>
+		<string>applinks:www.taketool.uz</string>
+	</array>
+	<!-- Push-уведомления (FCM). development — чтобы работало и в TestFlight;
+	     для App Store сборка переключает на production автоматически. -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

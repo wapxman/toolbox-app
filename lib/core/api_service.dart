@@ -223,6 +223,27 @@ class ApiService {
   Future<Map<String, dynamic>> markAllNotificationsRead() =>
     _patch('/notifications/read-all', {});
 
+  /// Отдать бэкенду FCM-токен этого телефона. Зовём после входа и при каждом
+  /// обновлении токена Firebase. На сервере upsert по токену, так что повторные
+  /// вызовы безопасны.
+  Future<Map<String, dynamic>> registerDevice(String deviceToken, String platform) =>
+    _post('/notifications/device', {
+      'token': deviceToken,
+      'platform': platform,
+      'app_version': ApiConfig.appVersion,
+    });
+
+  /// Снять устройство при выходе из аккаунта, иначе уведомления прошлого
+  /// владельца прилетят следующему человеку на том же телефоне.
+  Future<Map<String, dynamic>> unregisterDevice(String deviceToken) async {
+    final res = await http.delete(
+      Uri.parse('${ApiConfig.baseUrl}/notifications/device'),
+      headers: _headers,
+      body: jsonEncode({'token': deviceToken}),
+    ).timeout(ApiConfig.timeout);
+    return _handleResponse(res);
+  }
+
   // === LOCKS API ===
 
   Future<Map<String, dynamic>> getLockStatus() => _get('/locks/status');
