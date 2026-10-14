@@ -13,6 +13,21 @@ class MainScreen extends StatefulWidget {
   final int initialIndex;
   const MainScreen({super.key, this.initialIndex = 0});
 
+  /// Номера вкладок — чтобы по коду не бегали «магические» цифры.
+  static const int tabHome = 0;
+  static const int tabShop = 1;
+  static const int tabOrders = 3;
+  static const int tabProfile = 4;
+
+  /// Запрос «открой вкладку N» откуда угодно из приложения.
+  ///
+  /// Нужен кнопке «Потратить» у бонуса: тратят бонус в магазине, а не в
+  /// истории начислений, поэтому она обязана увести человека к инструментам,
+  /// в какой бы глубине экранов он сейчас ни находился.
+  static final ValueNotifier<int> tabRequest = ValueNotifier<int>(-1);
+
+  static void openTab(int index) => tabRequest.value = index;
+
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
@@ -27,12 +42,23 @@ class _MainScreenState extends State<MainScreen> {
     // Точка на вкладке «Профиль» зависит от счёта — следим за ним.
     _bonus.addListener(_onBonus);
     _bonus.refresh();
+    MainScreen.tabRequest.addListener(_onTabRequest);
   }
 
   @override
   void dispose() {
+    MainScreen.tabRequest.removeListener(_onTabRequest);
     _bonus.removeListener(_onBonus);
     super.dispose();
+  }
+
+  void _onTabRequest() {
+    final i = MainScreen.tabRequest.value;
+    if (i < 0 || !mounted) return;
+    setState(() => _currentIndex = i);
+    // Сбрасываем, иначе повторный запрос той же вкладки не сработает:
+    // ValueNotifier молчит, когда значение не изменилось.
+    MainScreen.tabRequest.value = -1;
   }
 
   void _onBonus() { if (mounted) setState(() {}); }

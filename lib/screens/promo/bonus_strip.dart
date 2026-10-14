@@ -13,8 +13,20 @@ import 'package:flutter/material.dart';
 import '../../core/bonus_service.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../home/main_screen.dart';
 import 'coin.dart';
 import 'wallet_screen.dart';
+
+/// Увести человека туда, где бонус можно потратить — в магазин.
+///
+/// ⚠️ Раньше «Потратить» открывало кошелёк, то есть ИСТОРИЮ начислений. Там
+/// тратить нечего: человек жмёт кнопку с намерением купить, а попадает в
+/// выписку. Поэтому закрываем всё, что открыто поверх, и переключаемся на
+/// вкладку магазина.
+void goSpendBonus(BuildContext context) {
+  Navigator.of(context).popUntil((r) => r.isFirst);
+  MainScreen.openTab(MainScreen.tabShop);
+}
 
 /// Монета Taketool — та же, что летит в кошелёк после выигрыша.
 /// Рисуется в [TaketoolCoin]: гурт, рант, тиснение и блик.
@@ -65,8 +77,7 @@ class _BonusStripState extends State<BonusStrip> {
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-          onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const WalletScreen())),
+          onTap: () => goSpendBonus(context),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
@@ -196,10 +207,24 @@ class _BonusCardState extends State<BonusCard> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
             ),
+            onPressed: () => goSpendBonus(context),
+            child: const Text('Выбрать инструмент',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+          ),
+        ),
+        // История — отдельной ссылкой, мелко: это справка, а не действие.
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.only(top: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
             onPressed: () => Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const WalletScreen())),
-            child: const Text('Куда потратить',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+            child: Text('История начислений',
+                style: TextStyle(fontSize: 11.5, color: Colors.white.withOpacity(.85))),
           ),
         ),
       ]),

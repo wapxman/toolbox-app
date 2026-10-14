@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api_service.dart';
 import '../../core/constants.dart';
+import 'bonus_strip.dart';
 import '../../core/theme.dart';
 
 class WalletScreen extends StatefulWidget {
@@ -126,6 +127,26 @@ class _WalletScreenState extends State<WalletScreen> {
             'Покрывает до $_maxPayPct% стоимости аренды. На доставку не распространяется.',
             style: const TextStyle(fontSize: 12, color: Colors.white70, height: 1.4),
           ),
+          // Кнопка прямо на счёте: человек пришёл сюда посмотреть деньги, и
+          // следующий его вопрос — «а где их потратить». Отвечаем сразу.
+          if (_balance > 0) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppTheme.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+                ),
+                onPressed: () => goSpendBonus(context),
+                child: const Text('Выбрать инструмент',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+              ),
+            ),
+          ],
         ]),
       );
 
