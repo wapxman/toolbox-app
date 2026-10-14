@@ -11,6 +11,7 @@
 //   • косой блик — он и делает металл металлом, а не краской.
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'mark.dart';
 
 class TaketoolCoin extends StatelessWidget {
   final double size;
@@ -24,7 +25,20 @@ class TaketoolCoin extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
         width: size,
         height: size,
-        child: CustomPaint(painter: _CoinPainter(shadow: shadow)),
+        // Монета — готовая картинка: объёмное золото рисуется убедительнее,
+        // чем всё, что можно начертить кодом. Знак на ней наш, наложен по
+        // контуру из app_icon.png, а не шрифтовой буквой.
+        //
+        // Если файл почему-то не прочитается, падаем на рисованную монету —
+        // пустое место вместо денег выглядело бы поломкой.
+        child: Image.asset(
+          'assets/images/coin.png',
+          width: size,
+          height: size,
+          filterQuality: FilterQuality.medium,
+          errorBuilder: (_, __, ___) =>
+              CustomPaint(size: Size(size, size), painter: _CoinPainter(shadow: shadow)),
+        ),
       );
 }
 
@@ -116,21 +130,16 @@ class _CoinPainter extends CustomPainter {
         ).createShader(Rect.fromCircle(center: c, radius: r * 0.78)),
     );
 
-    // Знак «T» с тиснением: тёмный след снизу (утоплено) и светлый сверху.
+    // Фирменный знак с тиснением: тёмный след снизу (утоплено) и светлый
+    // сверху. Рисуем контуром, а не буквой из шрифта: у знака ножка смещена
+    // вправо и срезана по диагонали, шрифтовая «Т» этого не передаёт.
+    final markSide = r * 1.34;
+    final markTopLeft = c - Offset(markSide / 2, markSide / 2);
     void letter(Color color, Offset shift) {
-      final tp = TextPainter(
-        text: TextSpan(
-          text: 'T',
-          style: TextStyle(
-            fontSize: r * 1.06,
-            height: 1,
-            fontWeight: FontWeight.w900,
-            color: color,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2) + shift);
+      canvas.drawPath(
+        taketoolMarkPath(markSide, offset: markTopLeft + shift),
+        Paint()..color = color,
+      );
     }
 
     // Смещение тиснения намеренно маленькое: больше — и знак начинает двоиться,
