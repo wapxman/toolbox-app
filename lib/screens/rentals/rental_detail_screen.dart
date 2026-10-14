@@ -587,9 +587,30 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
     try {
       final res = await _api.extendRental(r['id'].toString(), extraDays);
       if (!mounted) return;
-      final extra = (res['extra_price'] ?? 0) as int;
-      _toast('Продлено. Доплата: ${AppConstants.formatPrice(extra)}');
+      // Продление теперь оплачивается отдельным счётом: срок увеличится только
+      // после оплаты. Раньше сервер двигал срок сразу, а доплата оставалась
+      // числом в сообщении — инструментом пользовались бесплатно.
+      final bill = (res['rental'] as Map?)?.cast<String, dynamic>();
+      final toPay = (res['total_price'] ?? bill?['total_price'] ?? 0) as int;
       _changed = true;
+      if (bill != null && bill['id'] != null) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentScreen(
+              toolId: r['tool_id']?.toString() ?? '',
+              toolName: (r['tools']?['name'] ?? '').toString(),
+              kind: 'extension',
+              existingOrderId: bill['id'].toString(),
+              itemsPrice: (bill['items_price'] ?? toPay) as int,
+              bonus: (bill['bonus_applied'] ?? 0) as int,
+              totalPrice: toPay,
+            ),
+          ),
+        );
+      } else {
+        _toast('Счёт на продление создан. Оплатите в разделе «Заказы».');
+      }
       await _refresh();
     } on ApiException catch (e) {
       _toast(e.message);
