@@ -15,7 +15,7 @@
 // монеты не летят — просто срабатывает колбэк прилёта.
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../../core/theme.dart';
+import 'coin.dart';
 
 /// Когда первая монета достигает кошелька. Совпадает с её путём в анимации:
 /// старт почти сразу, полёт примерно половину общей длительности.
@@ -163,33 +163,9 @@ class _CoinLayerState extends State<_CoinLayer> with SingleTickerProviderStateMi
     ];
   }
 
-  Widget _coinDot(double size) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFD75E), Color(0xFFE8A517)],
-          ),
-          border: Border.all(color: const Color(0xFFB87C09), width: 1),
-          boxShadow: [
-            BoxShadow(color: const Color(0xFFE8A517).withOpacity(.45), blurRadius: 6),
-          ],
-        ),
-        child: Center(
-          child: Text(
-            'T',
-            style: TextStyle(
-              fontSize: size * 0.58,
-              height: 1,
-              fontWeight: FontWeight.w900,
-              color: AppTheme.primary,
-            ),
-          ),
-        ),
-      );
+  /// Та же монета, что лежит на полосе бонуса и на карте счёта: в полёте она
+  /// обязана быть узнаваемой, иначе непонятно, что именно прилетело в кошелёк.
+  Widget _coinDot(double size) => TaketoolCoin(size: size);
 
   /// Квадратичная кривая Безье — та самая дуга.
   Offset _quad(Offset a, Offset b, Offset c, double t) {

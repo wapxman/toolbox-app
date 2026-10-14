@@ -13,36 +13,18 @@ import 'package:flutter/material.dart';
 import '../../core/bonus_service.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import 'coin.dart';
 import 'wallet_screen.dart';
 
-/// Золотая монетка — тот же знак, что летит в кошелёк после выигрыша.
+/// Монета Taketool — та же, что летит в кошелёк после выигрыша.
+/// Рисуется в [TaketoolCoin]: гурт, рант, тиснение и блик.
 class BonusCoin extends StatelessWidget {
   final double size;
-  const BonusCoin({super.key, this.size = 26});
+  final bool shadow;
+  const BonusCoin({super.key, this.size = 26, this.shadow = true});
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFD75E), Color(0xFFE8A517)],
-          ),
-          border: Border.all(color: const Color(0xFFB87C09)),
-        ),
-        child: Center(
-          child: Text('T',
-              style: TextStyle(
-                fontSize: size * 0.56,
-                height: 1,
-                fontWeight: FontWeight.w900,
-                color: AppTheme.primary,
-              )),
-        ),
-      );
+  Widget build(BuildContext context) => TaketoolCoin(size: size, shadow: shadow);
 }
 
 /// Полоса «у вас есть бонус» для главной. Сама прячется, когда бонуса нет.
