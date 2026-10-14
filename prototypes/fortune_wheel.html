@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Taketool — Колесо Фортуны</title>
+<style>
+  :root{
+    --red:#DC0000;        /* фирменный красный приложения (иконка, splash) */
+    --logo-red:#C80013;   /* красный логотипа */
+    --black:#0D0D0D;
+    --gray:#F4F4F4;
+    --surface:#F8F8F5;
+    --muted:#6A6A6A;
+    --line:#E0E0E0;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:#15171b;
+    font-family:-apple-system,'Segoe UI',Roboto,Arial,Helvetica,sans-serif;
+    display:flex;flex-direction:column;align-items:center;
+    min-height:100vh;padding:24px 12px 40px;gap:18px;
+  }
+
+  /* ---------- рамка телефона ---------- */
+  .phone{
+    width:390px;max-width:100%;height:844px;
+    background:#fff;border-radius:44px;overflow:hidden;position:relative;
+    box-shadow:0 0 0 10px #22252b,0 0 0 12px #34383f,0 30px 70px rgba(0,0,0,.55);
+    display:flex;flex-direction:column;
+  }
+  .notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    width:112px;height:26px;background:#0b0c0e;border-radius:14px;z-index:40}
+  .statusbar{height:46px;flex:0 0 46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 26px;font-size:13px;font-weight:700;color:#fff;
+    background:var(--black)}
+
+  /* ---------- шапка ---------- */
+  .appbar{
+    background:var(--black);color:#fff;padding:4px 18px 20px;
+    display:flex;align-items:center;gap:10px;flex:0 0 auto;
+  }
+  .logo{display:flex;align-items:center;gap:7px;font-weight:800;font-size:19px;letter-spacing:-.5px}
+  .logo .tile{width:26px;height:26px;border-radius:6px;background:var(--logo-red);
+    color:#fff;display:grid;place-items:center;font-size:17px;font-weight:900;line-height:1}
+  .appbar .sub{margin-left:auto;font-size:11px;color:#9a9a9a;font-weight:600;text-align:right;line-height:1.3}
+
+  /* ---------- содержимое ---------- */
+  .screen{flex:1;overflow-y:auto;background:var(--surface);
+    display:flex;flex-direction:column;align-items:center;padding:18px 16px 26px}
+  h1{margin:0 0 2px;font-size:26px;font-weight:900;letter-spacing:-1.1px;color:var(--black);text-align:center}
+  .lead{margin:0 0 14px;font-size:13px;color:var(--muted);text-align:center;font-weight:500;line-height:1.45}
+  .lead b{color:var(--red)}
+
+  /* ---------- колесо ---------- */
+  .wheelbox{position:relative;width:318px;height:318px;margin:4px 0 6px;flex:0 0 auto}
+  canvas{display:block;width:100%;height:100%;
+    filter:drop-shadow(0 10px 22px rgba(0,0,0,.28))}
+  .pointer{
+    position:absolute;top:-7px;left:50%;transform:translateX(-50%);
+    width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;
+    border-top:22px solid var(--black);z-index:12;
+    filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))
+  }
+  .hub{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:23.3%;height:23.3%;border-radius:50%;background:#fff;z-index:11;
+    display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.3);
+    border:4px solid var(--black)
+  }
+  .hub span{font-weight:900;font-size:26px;color:var(--logo-red);line-height:1}
+
+  /* ---------- кнопка ---------- */
+  .spin{
+    margin-top:10px;width:100%;max-width:290px;border:0;cursor:pointer;
+    background:var(--red);color:#fff;font-size:17px;font-weight:800;letter-spacing:.2px;
+    padding:17px 20px;border-radius:14px;font-family:inherit;
+    box-shadow:0 8px 20px rgba(220,0,0,.32);transition:transform .12s,box-shadow .2s,background .2s
+  }
+  .spin:active{transform:translateY(2px);box-shadow:0 4px 12px rgba(220,0,0,.3)}
+  .spin:disabled{background:#CFCFCF;color:#fff;box-shadow:none;cursor:default}
+  .attempts{margin-top:9px;font-size:12px;color:var(--muted);font-weight:600}
+
+  /* ---------- список призов ---------- */
+  .prizes{width:100%;margin-top:18px}
+  .prizes h2{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted);
+    margin:0 0 9px;font-weight:800}
+  .prow{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--line);
+    border-radius:12px;padding:11px 13px;margin-bottom:7px}
+  .prow .ic{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;
+    font-size:17px;background:var(--gray);flex:0 0 auto}
+  .prow.top .ic{background:var(--logo-red);color:#fff}
+  .prow .nm{font-weight:700;font-size:14px;color:var(--black)}
+  .prow .ds{font-size:11px;color:var(--muted);margin-top:1px}
+  .prow .tag{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.4px;
+    padding:4px 8px;border-radius:999px;background:var(--gray);color:var(--muted);white-space:nowrap}
+  .prow.top .tag{background:var(--logo-red);color:#fff}
+
+  .rules{margin-top:12px;font-size:10.5px;color:#9a9a9a;line-height:1.5;text-align:center}
+
+  /* ---------- модалка выигрыша ---------- */
+  .modal{position:absolute;inset:0;background:rgba(10,10,10,.72);z-index:60;
+    display:none;align-items:center;justify-content:center;padding:26px;
+    -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+  .modal.on{display:flex}
+  .card{background:#fff;border-radius:22px;padding:30px 24px 24px;text-align:center;width:100%;
+    animation:pop .34s cubic-bezier(.2,1.3,.4,1)}
+  @keyframes pop{from{transform:scale(.82);opacity:0}to{transform:scale(1);opacity:1}}
+  .card .big{font-size:52px;line-height:1;margin-bottom:12px}
+  .card .ttl{font-size:12px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);font-weight:800}
+  .card .val{font-size:30px;font-weight:900;color:var(--black);letter-spacing:-1.2px;margin:7px 0 4px}
+  .card .val.rare{color:var(--logo-red)}
+  .card .note{font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:20px}
+  .card button{width:100%;border:0;background:var(--black);color:#fff;font-family:inherit;
+    font-size:15px;font-weight:800;padding:15px;border-radius:12px;cursor:pointer}
+
+  .confetti{position:absolute;width:9px;height:14px;border-radius:2px;z-index:55;pointer-events:none}
+
+  /* ---------- панель разработчика ---------- */
+  .dev{width:390px;max-width:100%;background:#1c1f24;border:1px solid #2c3037;border-radius:16px;
+    padding:16px 18px;color:#c9d1d9;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+  .dev h3{margin:0 0 10px;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7d8590;
+    font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+  .dev table{width:100%;border-collapse:collapse}
+  .dev td{padding:4px 0;border-bottom:1px solid #262a31}
+  .dev td:last-child{text-align:right;color:#fff;font-weight:700}
+  .dev .sum{color:#7ee787}
+  .dev button{margin-top:12px;width:100%;background:#2c3037;color:#c9d1d9;border:1px solid #3a3f47;
+    border-radius:8px;padding:10px;font-family:inherit;font-size:12px;cursor:pointer;font-weight:700}
+  .dev button:hover{background:#343a42}
+  .dev .out{margin-top:10px;white-space:pre-wrap;color:#8b949e;line-height:1.6;font-size:11.5px}
+
+  /* ---------- на телефоне рамку убираем: страница и есть экран ---------- */
+  @media (max-width:520px){
+    body{padding:0;gap:0;background:var(--surface)}
+    .phone{width:100%;height:auto;min-height:100svh;border-radius:0;box-shadow:none}
+    .notch,.statusbar{display:none}
+    .appbar{padding-top:calc(14px + env(safe-area-inset-top))}
+    .screen{overflow:visible}
+    .wheelbox{width:min(340px,86vw);height:min(340px,86vw)}
+    .modal{position:fixed}
+    .dev{width:100%;border-radius:0;border-left:0;border-right:0;margin-top:0}
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span>●●● ⌁ 100%</span></div>
+
+  <div class="appbar">
+    <div class="logo"><span class="tile">T</span>Taketool</div>
+    <div class="sub">Акция<br>«Колесо Фортуны»</div>
+  </div>
+
+  <div class="screen">
+    <h1>Колесо Фортуны</h1>
+    <p class="lead">Крутите и забирайте <b>бонус на аренду</b> инструмента.<br>Главный приз — шуруповёрт и 1 000 000 сум.</p>
+
+    <div class="wheelbox">
+      <div class="pointer"></div>
+      <canvas id="wheel" width="636" height="636"></canvas>
+      <div class="hub"><span>T</span></div>
+    </div>
+
+    <button class="spin" id="spinBtn">Крутить колесо</button>
+    <div class="attempts" id="attempts">Доступна 1 попытка</div>
+
+    <div class="prizes">
+      <h2>Призовой фонд</h2>
+      <div id="prizeList"></div>
+      <div class="rules">
+        Бонус начисляется на счёт в приложении и действует 30 дней.<br>
+        Инструменты вручаются в пункте выдачи. Полные правила — в разделе «Акции».
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="card">
+      <div class="big" id="mIcon">🎉</div>
+      <div class="ttl">Ваш выигрыш</div>
+      <div class="val" id="mVal">200 000 сум</div>
+      <div class="note" id="mNote">Бонус зачислен на счёт</div>
+      <button id="mBtn">Забрать</button>
+    </div>
+  </div>
+</div>
+
+<!-- панель для проверки математики, в продакшене её нет -->
+<div class="dev">
+  <h3>Шансы (панель разработчика)</h3>
+  <table id="oddsTable"></table>
+  <button id="simBtn">Прогнать 100 000 прокруток</button>
+  <div class="out" id="simOut">Проверка, что 99 % выпадает на 200–300 тысяч.</div>
+</div>
+
+<script>
+/* =======================================================================
+   ПРИЗЫ И ШАНСЫ
+   Шанс задаётся на ПРИЗ (в процентах), а не на сектор.
+   99.00 % — бонусы 200 000 и 300 000 сум, как и просил заказчик.
+   ======================================================================= */
+const PRIZES = {
+  p200:  {label:'200 000',  unit:'сум', icon:'💵', chance:60.00, rare:false,
+          note:'Бонус зачислен на счёт в приложении'},
+  p300:  {label:'300 000',  unit:'сум', icon:'💵', chance:39.00, rare:false,
+          note:'Бонус зачислен на счёт в приложении'},
+  p500:  {label:'500 000',  unit:'сум', icon:'💰', chance:0.50,  rare:true,
+          note:'Крупный бонус! Зачислен на счёт в приложении'},
+  pMln:  {label:'1 000 000',unit:'сум', icon:'🏆', chance:0.25,  rare:true,
+          note:'Главный денежный приз! С вами свяжется менеджер'},
+  pDrill:{label:'Шуруповёрт',unit:'',   icon:'🔧', chance:0.15,  rare:true,
+          note:'Заберите в пункте выдачи Taketool в течение 14 дней'},
+  pHammer:{label:'Перфоратор',unit:'',  icon:'🔨', chance:0.10,  rare:true,
+          note:'Заберите в пункте выдачи Taketool в течение 14 дней'}
+};
+
+/* Сектора колеса. Дорогие призы стоят поодиночке и визуально выделены белым —
+   они «ведут» взгляд, но их шанс задан выше и от числа секторов не зависит. */
+const SECTORS = ['p200','p300','pDrill','p200','p300','pMln',
+                 'p200','p300','pHammer','p200','p300','p500'];
+
+const C = {red:'#DC0000', logoRed:'#C80013', black:'#141414', white:'#FFFFFF', gray:'#F4F4F4'};
+
+/* ---------- отрисовка ---------- */
+const cv = document.getElementById('wheel');
+const cx = cv.getContext('2d');
+const N = SECTORS.length, SEG = 2*Math.PI/N;
+let rot = -SEG/2, spinning = false, attempts = 1;
+
+/* полотно подгоняем под плотность экрана: на Retina-айфоне (dpr 3)
+   колесо иначе выглядит мыльным. k — множитель всех размеров. */
+function fitCanvas(){
+  const cssSize = cv.getBoundingClientRect().width || 318;
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const px = Math.round(cssSize * dpr);
+  if(cv.width !== px){ cv.width = px; cv.height = px; }
+}
+
+function drawWheel(){
+  const S = cv.width, R = S/2, cC = R, k = S/636;
+  cx.clearRect(0,0,S,S);
+
+  // обод
+  cx.beginPath(); cx.arc(cC,cC,R-4*k,0,2*Math.PI);
+  cx.fillStyle = C.black; cx.fill();
+
+  for(let i=0;i<N;i++){
+    const p = PRIZES[SECTORS[i]];
+    const a0 = i*SEG + rot - Math.PI/2, a1 = a0 + SEG;
+
+    // тело сектора: редкие — белые, обычные — красный/чёрный в чередовании
+    cx.beginPath(); cx.moveTo(cC,cC); cx.arc(cC,cC,R-13*k,a0,a1); cx.closePath();
+    cx.fillStyle = p.rare ? C.white : (i%2 ? C.black : C.red);
+    cx.fill();
+    cx.lineWidth = 2*k; cx.strokeStyle = 'rgba(255,255,255,.18)'; cx.stroke();
+
+    // подпись вдоль радиуса
+    cx.save();
+    cx.translate(cC,cC);
+    cx.rotate(a0 + SEG/2);
+    cx.textAlign = 'right'; cx.textBaseline = 'middle';
+    cx.fillStyle = p.rare ? C.logoRed : C.white;
+
+    const isMoney = p.unit === 'сум';
+    if(isMoney){
+      cx.font = '900 '+Math.round((p.label.length>7?34:40)*k)+'px Arial,Helvetica,sans-serif';
+      cx.fillText(p.label, R-40*k, -9*k);
+      cx.font = '700 '+Math.round(22*k)+'px Arial,Helvetica,sans-serif';
+      cx.globalAlpha = p.rare ? .75 : .8;
+      cx.fillText('сум', R-40*k, 22*k);
+      cx.globalAlpha = 1;
+    }else{
+      // названия инструментов длинные: ужимаем шрифт и держим зазор
+      // и до ступицы (R-66k - ширина текста), и до иконки справа
+      cx.font = '900 '+Math.round(22*k)+'px Arial,Helvetica,sans-serif';
+      cx.fillText(p.label, R-66*k, 0);
+      cx.font = Math.round(22*k)+'px Arial,Helvetica,sans-serif';
+      cx.fillText(p.icon, R-32*k, 1);
+    }
+    cx.restore();
+  }
+
+  // внешний кант
+  cx.beginPath(); cx.arc(cC,cC,R-13*k,0,2*Math.PI);
+  cx.lineWidth = 7*k; cx.strokeStyle = C.black; cx.stroke();
+
+  // лампочки по ободу
+  for(let i=0;i<N;i++){
+    const a = i*SEG + rot - Math.PI/2;
+    const x = cC + Math.cos(a)*(R-8.5*k), y = cC + Math.sin(a)*(R-8.5*k);
+    cx.beginPath(); cx.arc(x,y,4*k,0,2*Math.PI);
+    cx.fillStyle = '#fff'; cx.globalAlpha=.85; cx.fill(); cx.globalAlpha=1;
+  }
+}
+
+/* ---------- взвешенный выбор приза ---------- */
+function pickPrize(){
+  const total = Object.values(PRIZES).reduce((s,p)=>s+p.chance,0);
+  let r = Math.random()*total;
+  for(const [id,p] of Object.entries(PRIZES)){ r -= p.chance; if(r<=0) return id; }
+  return 'p200';
+}
+
+/* ---------- прокрутка ---------- */
+const easeOut = t => 1 - Math.pow(1-t, 3);
+
+function spin(){
+  if(spinning || attempts<=0) return;
+  spinning = true; attempts--;
+  const btn = document.getElementById('spinBtn');
+  btn.disabled = true; btn.textContent = 'Крутим…';
+  document.getElementById('attempts').textContent = 'Попытки израсходованы';
+
+  const id = pickPrize();
+  const idx = SECTORS.reduce((a,s,i)=>(s===id?[...a,i]:a),[]);
+  const target = idx[Math.floor(Math.random()*idx.length)];
+
+  // доворот так, чтобы центр нужного сектора встал под указателем
+  const want = -(target+0.5)*SEG;
+  const turns = 6 + Math.floor(Math.random()*2);
+  const from = rot;
+  const to = want + 2*Math.PI*turns + 2*Math.PI*Math.floor((from - want)/(2*Math.PI));
+  const DUR = 5200, t0 = performance.now();
+
+  (function frame(now){
+    const t = Math.min(1,(now-t0)/DUR);
+    rot = from + (to-from)*easeOut(t);
+    drawWheel();
+    if(t<1) requestAnimationFrame(frame);
+    else { spinning=false; setTimeout(()=>showWin(id),420); }
+  })(t0);
+}
+
+/* ---------- результат ---------- */
+function showWin(id){
+  const p = PRIZES[id];
+  document.getElementById('mIcon').textContent = p.icon;
+  const v = document.getElementById('mVal');
+  v.textContent = p.unit ? p.label+' '+p.unit : p.label;
+  v.className = 'val' + (p.rare?' rare':'');
+  document.getElementById('mNote').textContent = p.note;
+  document.getElementById('modal').classList.add('on');
+  if(p.rare) confetti();
+}
+function confetti(){
+  const host = document.getElementById('modal');
+  for(let i=0;i<34;i++){
+    const d = document.createElement('div');
+    d.className = 'confetti';
+    d.style.left = Math.random()*100+'%';
+    d.style.top = '-20px';
+    d.style.background = [C.red,C.logoRed,C.black,'#fff'][i%4];
+    d.style.transform = 'rotate('+Math.random()*360+'deg)';
+    d.animate(
+      [{transform:'translateY(0) rotate(0deg)',opacity:1},
+       {transform:'translateY(700px) rotate('+(720+Math.random()*360)+'deg)',opacity:0}],
+      {duration:1800+Math.random()*1200, easing:'cubic-bezier(.3,.6,.5,1)', fill:'forwards'}
+    );
+    host.appendChild(d);
+    setTimeout(()=>d.remove(),3200);
+  }
+}
+
+/* ---------- список призов ---------- */
+function renderPrizes(){
+  const order = ['pDrill','pHammer','pMln','p500','p300','p200'];
+  document.getElementById('prizeList').innerHTML = order.map(id=>{
+    const p = PRIZES[id];
+    return `<div class="prow${p.rare?' top':''}">
+      <div class="ic">${p.icon}</div>
+      <div><div class="nm">${p.label}${p.unit?' '+p.unit:''}</div>
+           <div class="ds">${p.rare?'Ценный приз':'Бонус на аренду'}</div></div>
+      <div class="tag">${p.rare?'главный':'в наличии'}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- панель разработчика ---------- */
+function renderOdds(){
+  const rows = Object.values(PRIZES).map(p=>
+    `<tr><td>${p.label}${p.unit?' '+p.unit:''}</td><td>${p.chance.toFixed(2)} %</td></tr>`).join('');
+  const sum = Object.values(PRIZES).reduce((s,p)=>s+p.chance,0);
+  const core = PRIZES.p200.chance + PRIZES.p300.chance;
+  document.getElementById('oddsTable').innerHTML = rows +
+    `<tr><td class="sum">200 000 + 300 000</td><td class="sum">${core.toFixed(2)} %</td></tr>` +
+    `<tr><td>итого</td><td>${sum.toFixed(2)} %</td></tr>`;
+}
+document.getElementById('simBtn').onclick = ()=>{
+  const n = 100000, hit = {};
+  for(let i=0;i<n;i++){ const id = pickPrize(); hit[id]=(hit[id]||0)+1; }
+  const core = ((hit.p200||0)+(hit.p300||0))/n*100;
+  const lines = Object.keys(PRIZES).map(id=>{
+    const c = hit[id]||0;
+    return `${(PRIZES[id].label+(PRIZES[id].unit?' '+PRIZES[id].unit:'')).padEnd(16)} ${String(c).padStart(6)}  ${(c/n*100).toFixed(3)} %`;
+  });
+  document.getElementById('simOut').textContent =
+    lines.join('\n') + `\n\n200–300 тысяч: ${core.toFixed(2)} % из ${n.toLocaleString('ru')} прокруток`;
+};
+
+document.getElementById('spinBtn').onclick = spin;
+document.getElementById('mBtn').onclick = ()=>{
+  document.getElementById('modal').classList.remove('on');
+  const btn = document.getElementById('spinBtn');
+  // в прототипе возвращаем попытку, чтобы можно было крутить сколько угодно
+  attempts = 1; btn.disabled = false; btn.textContent = 'Крутить ещё раз (демо)';
+  document.getElementById('attempts').textContent = 'Демо-режим: попытки не ограничены';
+};
+
+renderPrizes(); renderOdds(); fitCanvas(); drawWheel();
+
+// поворот экрана / смена ширины — пересобираем полотно под новый размер
+let rz;
+addEventListener('resize', ()=>{ clearTimeout(rz); rz = setTimeout(()=>{ fitCanvas(); drawWheel(); }, 150); });
+addEventListener('orientationchange', ()=>setTimeout(()=>{ fitCanvas(); drawWheel(); }, 300));
+</script>
+</body>
+</html>
