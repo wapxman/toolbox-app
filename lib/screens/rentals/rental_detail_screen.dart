@@ -152,6 +152,10 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
                 _row(status == 'completed' ? 'Возвращён' : 'Вернуть до', _fmtDate(status == 'completed' ? r['actual_end'] : r['expected_end'])),
               ],
               if ((r['discount'] ?? 0) > 0) _row('Скидка', '−${AppConstants.formatPrice(r['discount'] as int)}'),
+              // Бонус с колеса: без этой строки человек видит сумму меньше
+              // цены и не понимает, откуда она — а это его выигрыш.
+              if ((r['bonus_applied'] ?? 0) > 0)
+                _row('Бонус с Колеса Фортуны', '−${AppConstants.formatPrice(r['bonus_applied'] as int)}'),
               if ((r['delivery_fee'] ?? 0) > 0) _row('Доставка', AppConstants.formatPrice(r['delivery_fee'] as int)),
               _row(status == 'pending_payment' ? 'К оплате' : 'Оплачено', AppConstants.formatPrice((r['total_price'] ?? 0) as int)),
               if ((r['overdue_fee'] ?? 0) > 0) _row('Штраф', AppConstants.formatPrice(r['overdue_fee'] as int)),

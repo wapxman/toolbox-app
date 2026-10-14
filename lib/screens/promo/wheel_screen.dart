@@ -224,24 +224,29 @@ class _WheelScreenState extends State<WheelScreen> with SingleTickerProviderStat
   /// на его счёт, и только потом его просят завести аккаунт. Наоборот было бы
   /// «заплати, потом покажем».
   Future<void> _claimAsGuest(int amount) async {
-    final box = _walletKey.currentContext?.findRenderObject() as RenderBox?;
-    final screen = MediaQuery.of(context).size;
-    final to = box != null
-        ? box.localToGlobal(box.size.center(Offset.zero))
-        : Offset(screen.width - 36, 60);
+    // Монеты летят только за деньгами. Выиграл инструмент — показывать полёт
+    // монет в кошелёк нечестно: человек получил перфоратор, а ему рисуют
+    // деньги, которых на счёт не придёт.
+    if (amount > 0) {
+      final box = _walletKey.currentContext?.findRenderObject() as RenderBox?;
+      final screen = MediaQuery.of(context).size;
+      final to = box != null
+          ? box.localToGlobal(box.size.center(Offset.zero))
+          : Offset(screen.width - 36, 60);
 
-    await CoinFlight.play(
-      context,
-      from: Offset(screen.width / 2, screen.height * 0.42),
-      to: to,
-      onArrive: () {
-        if (!mounted || amount <= 0) return;
-        setState(() {
-          _balanceFrom = _balance;
-          _balance += amount;
-        });
-      },
-    );
+      await CoinFlight.play(
+        context,
+        from: Offset(screen.width / 2, screen.height * 0.42),
+        to: to,
+        onArrive: () {
+          if (!mounted) return;
+          setState(() {
+            _balanceFrom = _balance;
+            _balance += amount;
+          });
+        },
+      );
+    }
     if (!mounted) return;
 
     // Экран регистрации. Вернулся с успехом — забираем приз с сервера:
