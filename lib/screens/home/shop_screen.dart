@@ -4,6 +4,7 @@ import '../../core/api_service.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../core/tool_photo.dart';
+import '../promo/wheel_entry.dart';
 import 'tool_detail_screen.dart';
 
 /// Магазин: все инструменты всех боксов — в аренду и на продажу.
@@ -137,6 +138,10 @@ class _ShopScreenState extends State<ShopScreen> {
             ),
           ]),
         ),
+        // Постоянная точка входа в акцию. Раньше колесо жило только в профиле,
+        // а профиль у гостя закрыт — то есть для незарегистрированного, ради
+        // которого акция и затевалась, её попросту не существовало.
+        const WheelBanner(),
         Expanded(child: _body()),
       ]),
     );
@@ -253,9 +258,16 @@ class _ShopScreenState extends State<ShopScreen> {
         : (salePrice != null && (t['sale_stock'] ?? 0) > 0 ? 'Купить новый: ${AppConstants.formatPrice(salePrice)}' : 'Только аренда');
 
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(
-        builder: (_) => ToolDetailScreen(toolId: t['id'].toString()),
-      )),
+      // Просмотр карточки — то самое «осмысленное действие», после которого
+      // приглашение в акцию уместно. До него человек ещё ничего от нас не
+      // получил, и модалка выглядела бы попрошайничеством.
+      onTap: () async {
+        WheelPromo.noteAction();
+        await Navigator.push(context, MaterialPageRoute(
+          builder: (_) => ToolDetailScreen(toolId: t['id'].toString()),
+        ));
+        if (mounted) WheelPromo.maybeShow(context);
+      },
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(

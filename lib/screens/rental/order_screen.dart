@@ -34,7 +34,11 @@ class _OrderScreenState extends State<OrderScreen> {
   int get itemsPrice => isRent ? AppConstants.priceForDays(_days, dayPrice) : salePrice;
   int get discount => itemsFull - itemsPrice;
   int get deliveryFee => _fulfillment == 'delivery' ? widget.deliveryFee : 0;
-  int get total => itemsPrice + deliveryFee;
+
+  /// Сколько бонуса спишется с этого заказа. Считает СЕРВЕР: потолок и остаток
+  /// живут там, и телефон не должен называть свою цифру.
+  int _bonus = 0;
+  int get total => itemsPrice + deliveryFee - _bonus;
 
   String get boxName => widget.tool['box']?['name'] ?? widget.tool['box_name'] ?? 'бокс';
   String get boxAddress => widget.tool['box']?['address'] ?? widget.tool['box_address'] ?? '';
@@ -44,6 +48,7 @@ class _OrderScreenState extends State<OrderScreen> {
     super.initState();
     _loadSlots();
     _prefillPhone();
+    _loadBonus();
   }
 
   Future<void> _loadSlots() async {
@@ -70,7 +75,23 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   void _setDays(int d) {
-    if (d >= 1 && d <= 30) setState(() => _days = d);
+    if (d >= 1 && d <= 30) {
+      setState(() => _days = d);
+      _loadBonus(); // от срока зависит сумма товаров, а от неё — потолок бонуса
+    }
+  }
+
+  /// Спросить у сервера, сколько бонуса уйдёт в этот заказ. Потолок считается
+  /// от стоимости товаров без доставки, поэтому пересчитываем при смене срока.
+  Future<void> _loadBonus() async {
+    try {
+      final q = await _api.getBonusQuote(itemsPrice);
+      if (mounted) setState(() => _bonus = (q['applicable'] ?? 0) as int);
+    } catch (_) {
+      // Молчим: не смогли посчитать — просто не показываем скидку, а не пугаем
+      // человека ошибкой на экране оформления. Сервер всё равно применит бонус.
+      if (mounted) setState(() => _bonus = 0);
+    }
   }
 
   void _goPay() {
@@ -93,6 +114,7 @@ class _OrderScreenState extends State<OrderScreen> {
         itemsPrice: itemsFull,
         discount: discount,
         deliveryFee: deliveryFee,
+        bonus: _bonus,
         totalPrice: total,
       ),
     ));
@@ -271,6 +293,12 @@ class _OrderScreenState extends State<OrderScreen> {
             _line('Скидка ${_days >= 7 ? '−35%' : '−20%'}', '−${AppConstants.formatPrice(discount)}', color: AppTheme.success),
           _line(_fulfillment == 'delivery' ? 'Доставка' : 'Из бокса',
               _fulfillment == 'delivery' ? AppConstants.formatPrice(deliveryFee) : 'бесплатно'),
+          // Выигранный бонус. Показываем отдельной строкой, а не растворяем в
+          // итоге: человек должен видеть, что приз с колеса действительно
+          // сработал, иначе акция для него остаётся обещанием.
+          if (_bonus > 0)
+            _line('Бонус с Колеса Фортуны', '−${AppConstants.formatPrice(_bonus)}',
+                color: AppTheme.success),
           const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1)),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             const Text('Итого', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),

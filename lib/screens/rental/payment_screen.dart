@@ -26,6 +26,9 @@ class PaymentScreen extends StatefulWidget {
   final int itemsPrice;
   final int discount;
   final int deliveryFee;
+  /// Сколько бонуса с Колеса Фортуны уйдёт в счёт заказа. Цифру называет
+  /// сервер; здесь её только показывают, чтобы итог не возникал из ниоткуда.
+  final int bonus;
   final int totalPrice;
   final String? rentalId;         // для courier_return — родительская аренда
   final String? existingOrderId;  // оплатить уже созданный заказ (штраф)
@@ -42,6 +45,7 @@ class PaymentScreen extends StatefulWidget {
     this.itemsPrice = 0,
     this.discount = 0,
     this.deliveryFee = 0,
+    this.bonus = 0,
     required this.totalPrice,
     this.rentalId,
     this.existingOrderId,
@@ -236,6 +240,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 if (!isCourierReturn && !isPenalty) _line(widget.kind == 'buy' ? 'Инструмент' : 'Аренда', AppConstants.formatPrice(widget.itemsPrice)),
                 if (widget.discount > 0) _line('Скидка', '−${AppConstants.formatPrice(widget.discount)}', color: AppTheme.success),
                 if (widget.deliveryFee > 0) _line(isCourierReturn ? 'Выезд курьера' : 'Доставка', AppConstants.formatPrice(widget.deliveryFee)),
+                if (widget.bonus > 0)
+                  _line('Бонус с Колеса Фортуны', '−${AppConstants.formatPrice(widget.bonus)}',
+                      color: AppTheme.success),
                 if (isPenalty) _line('Начатые дни сверх срока × цена дня × 1,5', ''),
                 const Padding(padding: EdgeInsets.symmetric(vertical: 6), child: Divider(height: 1)),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [

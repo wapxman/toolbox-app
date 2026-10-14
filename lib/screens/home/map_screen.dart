@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
 import '../../core/api_service.dart';
 import '../../core/theme.dart';
+import '../promo/wheel_entry.dart';
 import 'box_detail_screen.dart';
 import 'box_offline_screen.dart';
 
@@ -110,26 +111,34 @@ class _MapScreenState extends State<MapScreen> {
             },
           ),
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 2)),
-                  ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 2)),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.search, color: AppTheme.textHint, size: 20),
+                        const SizedBox(width: 10),
+                        Text('Найти инструмент или бокс',
+                          style: TextStyle(fontSize: 13, color: AppTheme.textHint)),
+                      ],
+                    ),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(Icons.search, color: AppTheme.textHint, size: 20),
-                    const SizedBox(width: 10),
-                    Text('Найти инструмент или бокс',
-                      style: TextStyle(fontSize: 13, color: AppTheme.textHint)),
-                  ],
-                ),
-              ),
+                // Акция на главной: это первый экран, и для гостя — первая
+                // возможность вообще узнать про колесо.
+                const WheelBanner(floating: true),
+              ],
             ),
           ),
           Positioned(

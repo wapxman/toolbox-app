@@ -5,6 +5,8 @@ import '../welcome_screen.dart';
 import 'about_screen.dart';
 import 'history_screen.dart';
 import 'notifications_screen.dart';
+import '../promo/wheel_screen.dart';
+import '../promo/wallet_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -113,6 +115,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 24),
                   _statsRow(),
                   const SizedBox(height: 24),
+                  _menuItem(Icons.casino_outlined, 'Колесо Фортуны', () {
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const WheelScreen()));
+                  }),
+                  _menuItem(Icons.account_balance_wallet_outlined, 'Бонусный счёт', () {
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const WalletScreen()));
+                  }),
                   _menuItem(Icons.history, 'История аренд', () {
                     Navigator.push(context,
                         MaterialPageRoute(builder: (_) => const HistoryScreen()));

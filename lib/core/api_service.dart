@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'constants.dart';
@@ -31,9 +32,31 @@ class ApiService {
 
   bool get isLoggedIn => _token != null;
 
+  /// Метка устройства. Нужна Колесу Фортуны: гость крутит до регистрации, и
+  /// выигрыш надо за кем-то числить, пока аккаунта нет.
+  ///
+  /// ⚠️ Это НЕ защита от накрутки: переустановка даёт новую метку. Настоящий
+  /// предохранитель стоит на сервере — при выдаче приза он смотрит, сколько
+  /// прокруток положено аккаунту (один номер телефона — одна попытка).
+  String? _deviceId;
+
+  Future<String> deviceId() async {
+    if (_deviceId != null) return _deviceId!;
+    final prefs = await SharedPreferences.getInstance();
+    var id = prefs.getString('device_id');
+    if (id == null || id.isEmpty) {
+      final r = Random.secure();
+      id = List.generate(16, (_) => r.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+      await prefs.setString('device_id', id);
+    }
+    _deviceId = id;
+    return id;
+  }
+
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
     'X-App-Version': ApiConfig.appVersion,
+    if (_deviceId != null) 'X-Device-Id': _deviceId!,
     if (_token != null) 'Authorization': 'Bearer $_token',
   };
 
@@ -247,6 +270,41 @@ class ApiService {
   // === LOCKS API ===
 
   Future<Map<String, dynamic>> getLockStatus() => _get('/locks/status');
+
+  // === КОЛЕСО ФОРТУНЫ И КОШЕЛЁК ===
+  //
+  // ⚠️ Приз выбирает СЕРВЕР. Приложение не знает ни шансов, ни весов: оно
+  // просит прокрутить и получает готовый результат, под который проигрывает
+  // анимацию. Иначе достаточно подменить ответ, чтобы «выиграть» главный приз.
+  // По той же причине «сколько спишется» считает сервер (quote), а не телефон —
+  // потолок и баланс живут там.
+
+  /// Состояние акции: включена ли, сколько попыток осталось, баланс, призы,
+  /// раскладка секторов. Открыто и гостю.
+  Future<Map<String, dynamic>> getWheel() async {
+    await deviceId(); // гостя сервер узнаёт только по метке устройства
+    return _get('/wheel');
+  }
+
+  /// Прокрутить. Возвращает { prize: {code,label,kind,amount}, balance, pending }.
+  /// pending: true — крутил гость, приз ждёт регистрации.
+  Future<Map<String, dynamic>> spinWheel() async {
+    await deviceId();
+    return _post('/wheel/spin', {});
+  }
+
+  /// Забрать выигрыш, накрученный до регистрации. Зовётся сразу после входа.
+  Future<Map<String, dynamic>> claimWheelPrize() async {
+    await deviceId();
+    return _post('/wheel/claim', {});
+  }
+
+  /// Кошелёк: баланс и история движений.
+  Future<Map<String, dynamic>> getWallet() => _get('/wheel/wallet');
+
+  /// Сколько бонуса спишется с заказа на сумму [itemsPrice] (без доставки).
+  Future<Map<String, dynamic>> getBonusQuote(int itemsPrice) =>
+      _get('/wheel/quote?items_price=$itemsPrice');
 }
 
 class ApiException implements Exception {

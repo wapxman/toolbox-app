@@ -1,5 +1,12 @@
 class ApiConfig {
-  static const String baseUrl = 'https://toolbox-backend-eight.vercel.app/api';
+  /// Боевой сервер. На время отладки подменяется при сборке:
+  /// `flutter run --dart-define=API_BASE=http://10.0.2.2:3000/api`
+  /// (10.0.2.2 — это «компьютер» с точки зрения андроид-эмулятора).
+  /// Без флага подставляется боевой адрес, так что релизные сборки не трогаем.
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE',
+    defaultValue: 'https://toolbox-backend-eight.vercel.app/api',
+  );
   /// Уходит в заголовке X-App-Version — попадает в журнал согласий с офертой.
   /// ⚠️ Держать в соответствии с version в pubspec.yaml: иначе в журнале
   /// окажется версия, которой у пользователя нет (так было с 1.1.2+11 при 1.1.3+12).
