@@ -261,9 +261,13 @@ class _ShopScreenState extends State<ShopScreen> {
     final busyText = busyUntil != null
         ? 'Занят до ${busyUntil.day.toString().padLeft(2, '0')}.${busyUntil.month.toString().padLeft(2, '0')}'
         : 'Занят';
-    final big = _mode == 'buy' && salePrice != null
-        ? AppConstants.formatPrice(salePrice)
-        : '${AppConstants.formatPrice(dayPrice)}/день';
+    // Цена с учётом бонуса: показываем сразу ту сумму, которую человек
+    // заплатит, а прежнюю зачёркиваем. Абстрактный остаток на счету выгодой не
+    // ощущается — ощущается зачёркнутая цена.
+    final base = buyMode ? (salePrice ?? 0) : dayPrice;
+    final cut = _bonus.applicableTo(base);
+    final suffix = buyMode ? '' : '/день';
+    final big = '${AppConstants.formatPrice(base - cut)}$suffix';
     final small = _mode == 'buy'
         ? 'Аренда: ${AppConstants.formatPrice(dayPrice)}/день'
         : (salePrice != null && (t['sale_stock'] ?? 0) > 0 ? 'Купить новый: ${AppConstants.formatPrice(salePrice)}' : 'Только аренда');
@@ -296,14 +300,47 @@ class _ShopScreenState extends State<ShopScreen> {
                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, height: 1.3)),
           ),
           const SizedBox(height: 6),
-          Text(big, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.primary)),
+          // Две цены в строке у длинных сумм не помещались и обрезались
+          // («990 000 с…»), поэтому строку ужимаем целиком, а не режем текст.
+          SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text(big,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.primary)),
+                if (cut > 0) ...[
+                  const SizedBox(width: 5),
+                  Text(
+                    AppConstants.formatPrice(base),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textHint,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.lineThrough,
+                      decorationColor: AppTheme.textHint,
+                    ),
+                  ),
+                ],
+              ]),
+            ),
+          ),
           const SizedBox(height: 2),
           Text(small, maxLines: 1, overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
-          // Бонус прямо на цене: человек видит выгоду там, где выбирает, а не
-          // вспоминает про остаток на счету. Для аренды считаем от цены суток —
-          // столько и спишется при однодневном заказе.
-          BonusPriceChip(itemsPrice: _mode == 'buy' ? (salePrice ?? 0) : dayPrice),
+          // Подпись объясняет, откуда взялась зачёркнутая цена: без неё скидка
+          // выглядит как распродажа, а не как потраченный выигрыш.
+          if (cut > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text('бонусом −${AppConstants.formatPrice(cut)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF1C9A4B))),
+            ),
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

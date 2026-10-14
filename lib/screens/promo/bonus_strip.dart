@@ -5,7 +5,8 @@
 // заходят редко. Здесь — две формы одного и того же:
 //
 //   • BonusStrip — полоса на главной: сколько есть и когда сгорит;
-//   • BonusPriceChip — скидка прямо на цене товара в списке.
+//   • цена со скидкой на карточке товара — её рисуют сами экраны
+//     магазина и инструмента через BonusService.applicableTo().
 //
 // Срок сгорания указан намеренно: именно он возвращает человека в приложение.
 // Умолчать о нём — значит дать бонусу тихо сгореть.
@@ -228,33 +229,6 @@ class _BonusCardState extends State<BonusCard> {
           ),
         ),
       ]),
-    );
-  }
-}
-
-/// Скидка на цене товара: «бонусом −38 400». Показывает конечную цену, а не
-/// абстрактный остаток на счету — так бонус превращается из цифры в выгоду.
-class BonusPriceChip extends StatelessWidget {
-  /// Цена позиции, от которой считается потолок (за весь срок или за штуку).
-  final int itemsPrice;
-  const BonusPriceChip({super.key, required this.itemsPrice});
-
-  @override
-  Widget build(BuildContext context) {
-    final cut = BonusService().applicableTo(itemsPrice);
-    if (cut <= 0) return const SizedBox.shrink();
-    return Container(
-      margin: const EdgeInsets.only(top: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEAF7EE),
-        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-      ),
-      child: Text(
-        'бонусом −${AppConstants.formatPrice(cut)}',
-        style: const TextStyle(
-            fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF1C9A4B)),
-      ),
     );
   }
 }

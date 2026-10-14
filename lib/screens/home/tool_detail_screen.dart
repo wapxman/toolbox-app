@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/api_service.dart';
+import '../../core/bonus_service.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../core/tool_photo.dart';
@@ -116,8 +117,7 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
             icon: Icons.schedule,
             child: Row(children: [
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('${AppConstants.formatPrice(dayPrice)} / день',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primary)),
+                _priceWithBonus(dayPrice, suffix: ' / день'),
                 const SizedBox(height: 2),
                 Text('от 1 до 30 дней', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
               ]),
@@ -137,8 +137,7 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
               icon: Icons.shopping_bag_outlined,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Text(AppConstants.formatPrice(salePrice),
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primary)),
+                  _priceWithBonus(salePrice),
                   const Spacer(),
                   Text(stock > 0 ? 'В наличии: $stock шт.' : 'Нет в наличии',
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
@@ -206,17 +205,54 @@ class _ToolDetailScreenState extends State<ToolDetailScreen> {
                       child: available
                           ? OutlinedButton(
                               onPressed: () => _start('buy'),
-                              child: FittedBox(fit: BoxFit.scaleDown, child: Text('Купить за ${AppConstants.formatPrice(salePrice)}')),
+                              child: FittedBox(fit: BoxFit.scaleDown, child: Text('Купить за ${AppConstants.formatPrice(salePrice - BonusService().applicableTo(salePrice))}')),
                             )
                           : ElevatedButton(
                               onPressed: () => _start('buy'),
-                              child: FittedBox(fit: BoxFit.scaleDown, child: Text('Купить новый за ${AppConstants.formatPrice(salePrice)}')),
+                              child: FittedBox(fit: BoxFit.scaleDown, child: Text('Купить новый за ${AppConstants.formatPrice(salePrice - BonusService().applicableTo(salePrice))}')),
                             ),
                     ),
                 ]),
         ),
       ),
     );
+  }
+
+  /// Цена с учётом бонуса: сверху — сумма, которую человек реально заплатит,
+  /// рядом зачёркнута прежняя, снизу подпись, откуда скидка. Без подписи
+  /// зачёркнутая цена читается как распродажа, а не как потраченный выигрыш.
+  Widget _priceWithBonus(int price, {String suffix = ''}) {
+    final cut = BonusService().applicableTo(price);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        Text('${AppConstants.formatPrice(price - cut)}$suffix',
+            style: const TextStyle(
+                fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primary)),
+        if (cut > 0) ...[
+          const SizedBox(width: 7),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Text(
+              AppConstants.formatPrice(price),
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.textHint,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.lineThrough,
+                decorationColor: AppTheme.textHint,
+              ),
+            ),
+          ),
+        ],
+      ]),
+      if (cut > 0)
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Text('бонусом −${AppConstants.formatPrice(cut)}',
+              style: const TextStyle(
+                  fontSize: 11.5, fontWeight: FontWeight.w800, color: Color(0xFF1C9A4B))),
+        ),
+    ]);
   }
 
   Widget _block({required String title, required IconData icon, required Widget child}) => Container(
