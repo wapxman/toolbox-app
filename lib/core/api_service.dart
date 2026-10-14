@@ -302,6 +302,9 @@ class ApiService {
   /// Кошелёк: баланс и история движений.
   Future<Map<String, dynamic>> getWallet() => _get('/wheel/wallet');
 
+  /// Только счёт и ближайшее сгорание — для плашек на главной и в магазине.
+  Future<Map<String, dynamic>> getBonusBalance() => _get('/wheel/balance');
+
   /// Сколько бонуса спишется с заказа на сумму [itemsPrice] (без доставки).
   Future<Map<String, dynamic>> getBonusQuote(int itemsPrice) =>
       _get('/wheel/quote?items_price=$itemsPrice');

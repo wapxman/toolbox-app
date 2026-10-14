@@ -4,6 +4,8 @@ import '../../core/api_service.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../core/tool_photo.dart';
+import '../../core/bonus_service.dart';
+import '../promo/bonus_strip.dart';
 import '../promo/wheel_entry.dart';
 import 'tool_detail_screen.dart';
 
@@ -29,12 +31,20 @@ class _ShopScreenState extends State<ShopScreen> {
   bool _loading = true;
   String? _error;
 
+  final _bonus = BonusService();
+
   @override
   void initState() {
     super.initState();
     _loadMeta();
     _load();
+    // Цены в списке показывают скидку бонусом — список обязан перерисоваться,
+    // когда счёт изменится (прокрутили колесо, оформили заказ).
+    _bonus.addListener(_onBonus);
+    _bonus.refresh();
   }
+
+  void _onBonus() { if (mounted) setState(() {}); }
 
   Future<void> _loadMeta() async {
     try {
@@ -68,6 +78,7 @@ class _ShopScreenState extends State<ShopScreen> {
 
   @override
   void dispose() {
+    _bonus.removeListener(_onBonus);
     _debounce?.cancel();
     _search.dispose();
     super.dispose();
@@ -289,6 +300,10 @@ class _ShopScreenState extends State<ShopScreen> {
           const SizedBox(height: 2),
           Text(small, maxLines: 1, overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+          // Бонус прямо на цене: человек видит выгоду там, где выбирает, а не
+          // вспоминает про остаток на счету. Для аренды считаем от цены суток —
+          // столько и спишется при однодневном заказе.
+          BonusPriceChip(itemsPrice: _mode == 'buy' ? (salePrice ?? 0) : dayPrice),
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../core/api_service.dart';
+import '../../core/bonus_service.dart';
 import 'map_screen.dart';
 import 'shop_screen.dart';
 import '../rentals/rentals_screen.dart';
@@ -18,6 +19,23 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   late int _currentIndex = widget.initialIndex;
+  final _bonus = BonusService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Точка на вкладке «Профиль» зависит от счёта — следим за ним.
+    _bonus.addListener(_onBonus);
+    _bonus.refresh();
+  }
+
+  @override
+  void dispose() {
+    _bonus.removeListener(_onBonus);
+    super.dispose();
+  }
+
+  void _onBonus() { if (mounted) setState(() {}); }
 
   void _onQrTap() {
     Navigator.push(
@@ -127,6 +145,9 @@ class _MainScreenState extends State<MainScreen> {
 
   Widget _tabItem(int index, IconData icon, IconData activeIcon, String label) {
     final isActive = _currentIndex == index;
+    // Точка на «Профиле», пока есть невостребованный бонус: выигрыш лежит и
+    // ждёт, а человек о нём не знает — точка и зовёт зайти.
+    final dot = index == 4 && BonusService().hasBonus;
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = index),
       behavior: HitTestBehavior.opaque,
@@ -135,11 +156,27 @@ class _MainScreenState extends State<MainScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isActive ? activeIcon : icon,
-              size: 22,
-              color: isActive ? AppTheme.primary : AppTheme.textHint,
-            ),
+            Stack(clipBehavior: Clip.none, children: [
+              Icon(
+                isActive ? activeIcon : icon,
+                size: 22,
+                color: isActive ? AppTheme.primary : AppTheme.textHint,
+              ),
+              if (dot)
+                Positioned(
+                  right: -3,
+                  top: -1,
+                  child: Container(
+                    width: 9,
+                    height: 9,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                  ),
+                ),
+            ]),
             const SizedBox(height: 2),
             Text(
               label,

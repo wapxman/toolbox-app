@@ -10,6 +10,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/api_service.dart';
+import '../../core/bonus_service.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../auth/register_screen.dart';
@@ -63,18 +64,38 @@ class _WheelScreenState extends State<WheelScreen> with SingleTickerProviderStat
 
   double _angle = 0; // текущий угол в оборотах
 
+  /// Свободное вращение, пока ждём ответ сервера.
+  ///
+  /// ⚠️ Раньше колесо стояло с надписью «Крутим…», пока шёл запрос: анимация
+  /// начиналась только после ответа, и на обычной мобильной сети это секунда-
+  /// две неподвижного экрана — выглядит как зависание. Теперь колесо
+  /// раскручивается сразу по нажатию, а ответ, когда придёт, лишь задаёт, где
+  /// затормозить. Ждать человек не любит, но ждать крутящееся колесо — готов.
+  late final AnimationController _free;
+  static const double _freeTurns = 34; // оборотов за весь прогон
+  static const int _freeSeconds = 30;  // дольше таймаута сети (15 с) с запасом
+
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 4200));
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600));
+    _free = AnimationController(vsync: this, duration: const Duration(seconds: _freeSeconds));
     _turns = AlwaysStoppedAnimation(0);
     _load();
   }
 
   @override
   void dispose() {
+    _free.dispose();
     _ctrl.dispose();
     super.dispose();
+  }
+
+  /// Угол прямо сейчас, в оборотах: либо свободное вращение, либо торможение.
+  double get _visualAngle {
+    if (_free.isAnimating) return _angle + _free.value * _freeTurns;
+    if (_ctrl.isAnimating) return _turns.value;
+    return _angle;
   }
 
   Future<void> _load() async {
@@ -89,6 +110,13 @@ class _WheelScreenState extends State<WheelScreen> with SingleTickerProviderStat
         _maxPayPct = (d['max_pay_pct'] ?? 50) as int;
         _prizes = ((d['prizes'] ?? []) as List).cast<Map<String, dynamic>>();
         _requiresAccount = d['requires_account'] == true;
+        // Сервер — источник истины: попыток нет, значит карточку акции больше
+        // не показываем; появились (вошли под другим номером) — возвращаем.
+        if (_spinsLeft <= 0) {
+          WheelPromo.markSpun();
+        } else {
+          WheelPromo.clearSpun();
+        }
         _rules = ((d['rules'] ?? {}) as Map).cast<String, dynamic>();
         _sectors = ((d['sectors'] ?? []) as List).map((e) => e.toString()).toList();
         // Старый сервер раскладки не отдаёт — тогда сектор на приз, как было.
@@ -97,6 +125,8 @@ class _WheelScreenState extends State<WheelScreen> with SingleTickerProviderStat
         }
         _loading = false;
       });
+      // Счёт мог измениться — плашки на главной и в магазине подхватят сами.
+      BonusService().refresh();
     } catch (e) {
       setState(() { _error = _human(e); _loading = false; });
     }
@@ -111,6 +141,12 @@ class _WheelScreenState extends State<WheelScreen> with SingleTickerProviderStat
     if (_spinning || _prizes.isEmpty) return;
     setState(() { _spinning = true; });
 
+    // Раскручиваем НЕМЕДЛЕННО, не дожидаясь сервера: иначе человек секунду-две
+    // смотрит на неподвижное колесо с надписью «Крутим…» и считает, что всё
+    // зависло. Приз по-прежнему выбирает сервер — здесь только движение.
+    _free.value = 0;
+    _free.forward();
+
     Map<String, dynamic> prize;
     bool pending;
     try {
@@ -119,8 +155,18 @@ class _WheelScreenState extends State<WheelScreen> with SingleTickerProviderStat
       _balance = (d['balance'] ?? _balance) as int;
       pending = d['pending'] == true; // крутил гость — приз ждёт регистрации
     } catch (e) {
+      // Ошибка — мягко тормозим на месте, а не бросаем колесо замертво.
+      final stopped = _visualAngle;
+      _free.stop();
+      _angle = stopped;
+      _turns = Tween<double>(begin: stopped, end: stopped + 0.6)
+          .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+      _ctrl.reset();
+      await _ctrl.forward();
+      _angle = stopped + 0.6;
+      if (!mounted) return;
       setState(() { _spinning = false; });
-      if (mounted) _say(_human(e));
+      _say(_human(e));
       return;
     }
 
@@ -143,10 +189,15 @@ class _WheelScreenState extends State<WheelScreen> with SingleTickerProviderStat
     // крутим на целое число оборотов и показываем результат как есть.
     final jitter = (math.Random().nextDouble() - 0.5) * seg * 0.6;
     final target = idx < 0 ? 0.0 : -(idx * seg + jitter);
-    final full = 6 + math.Random().nextInt(2); // полных оборотов для разгона
-    final end = _angle.floorToDouble() + full + target;
 
-    _turns = Tween<double>(begin: _angle, end: end)
+    // Колесо уже крутится — тормозим с того места, где оно сейчас, иначе будет
+    // рывок. Два-три оборота на торможение: меньше выглядит как обрыв.
+    final from = _visualAngle;
+    _free.stop();
+    final full = 2 + math.Random().nextInt(2);
+    final end = from.floorToDouble() + full + target;
+
+    _turns = Tween<double>(begin: from, end: end)
         .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutQuart));
     _ctrl.reset();
     await _ctrl.forward();
@@ -335,9 +386,11 @@ class _WheelScreenState extends State<WheelScreen> with SingleTickerProviderStat
             Padding(
               padding: const EdgeInsets.only(top: 20),
               child: AnimatedBuilder(
-                animation: _ctrl,
+                // Слушаем оба: свободное вращение в ожидании сервера и
+                // торможение на выпавший сектор.
+                animation: Listenable.merge([_free, _ctrl]),
                 builder: (_, child) => Transform.rotate(
-                  angle: (_ctrl.isAnimating ? _turns.value : _angle) * 2 * math.pi,
+                  angle: _visualAngle * 2 * math.pi,
                   child: child,
                 ),
                 child: CustomPaint(

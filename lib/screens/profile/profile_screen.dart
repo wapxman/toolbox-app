@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../core/api_service.dart';
+import '../../core/bonus_service.dart';
 import '../../core/theme.dart';
 import '../welcome_screen.dart';
 import 'about_screen.dart';
 import 'history_screen.dart';
 import 'notifications_screen.dart';
+import '../promo/bonus_strip.dart';
 import '../promo/wheel_screen.dart';
 import '../promo/wallet_screen.dart';
 
@@ -44,6 +46,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _logout() async {
     await _api.clearToken();
+    // Чужие деньги на экране — худшее, что можно показать после выхода.
+    BonusService().forget();
     if (mounted) _goToWelcome();
   }
 
@@ -114,7 +118,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
                   const SizedBox(height: 24),
                   _statsRow(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+                  // Карта бонусного счёта. Стоит выше меню и выглядит как
+                  // ценность, а не как строчка списка: это выигрыш человека,
+                  // и он должен искать его глазами, а не в пунктах меню.
+                  const BonusCard(),
+                  const SizedBox(height: 8),
                   _menuItem(Icons.casino_outlined, 'Колесо Фортуны', () {
                     Navigator.push(context,
                         MaterialPageRoute(builder: (_) => const WheelScreen()));

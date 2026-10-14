@@ -42,6 +42,19 @@ class WheelPromo {
     await p.setBool(_kSpun, true);
   }
 
+  /// Крутил ли уже. По этой отметке прячется карточка акции.
+  static Future<bool> alreadySpun() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getBool(_kSpun) == true;
+  }
+
+  /// Снять отметку — если сервер говорит, что попытка всё-таки есть.
+  /// Нужно после выхода из аккаунта и входа под другим номером.
+  static Future<void> clearSpun() async {
+    final p = await SharedPreferences.getInstance();
+    await p.remove(_kSpun);
+  }
+
   static Future<bool> _shouldShow() async {
     if (_shownThisRun || _actions < _actionsBefore) return false;
     final p = await SharedPreferences.getInstance();
@@ -150,9 +163,45 @@ class _WheelInvite extends StatelessWidget {
 /// тень вместо рамки, иначе она тонет в картинке. В ленте магазина наоборот:
 /// тень выглядела бы рекламной наклейкой, а всё похожее на рекламу взгляд
 /// пропускает мимо.
-class WheelBanner extends StatelessWidget {
+class WheelBanner extends StatefulWidget {
   final bool floating;
   const WheelBanner({super.key, this.floating = false});
+
+  @override
+  State<WheelBanner> createState() => _WheelBannerState();
+}
+
+class _WheelBannerState extends State<WheelBanner> {
+  /// Показывать ли карточку. Человек уже крутил — звать его нечем, кнопка
+  /// «Крутить» на том, что больше не крутится, выглядит издёвкой.
+  ///
+  /// Решение принимаем по локальной отметке: она ставится сразу после
+  /// прокрутки и не требует запроса на каждом открытии экрана. Отметка
+  /// обновляется и с сервера — на экране колеса, когда он узнаёт, что попыток
+  /// не осталось (например, крутили с другого телефона).
+  bool _show = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _decide();
+  }
+
+  Future<void> _decide() async {
+    final spun = await WheelPromo.alreadySpun();
+    if (mounted) setState(() => _show = !spun);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_show) return const SizedBox.shrink();
+    return _WheelBannerBody(floating: widget.floating);
+  }
+}
+
+class _WheelBannerBody extends StatelessWidget {
+  final bool floating;
+  const _WheelBannerBody({required this.floating});
 
   @override
   Widget build(BuildContext context) {

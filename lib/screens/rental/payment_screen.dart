@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme.dart';
 import '../../core/constants.dart';
 import '../../core/api_service.dart';
+import '../../core/bonus_service.dart';
 import 'unlock_screen.dart';
 import 'order_placed_screen.dart';
 
@@ -180,6 +181,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final res = await _api.getPaymentStatus(_orderId!);
       if (res['paid'] == true) {
         _pollTimer?.cancel();
+        // Бонус ушёл в счёт заказа — обновляем, иначе на главной и в магазине
+        // ещё какое-то время будет висеть потраченная сумма.
+        BonusService().refresh();
         if (!mounted) return;
         if (isPenalty || widget.existingOrderId != null) {
           Navigator.pop(context, true);

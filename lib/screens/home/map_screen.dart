@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
 import '../../core/api_service.dart';
 import '../../core/theme.dart';
+import '../promo/bonus_strip.dart';
 import '../promo/wheel_entry.dart';
 import 'box_detail_screen.dart';
 import 'box_offline_screen.dart';
@@ -138,6 +139,12 @@ class _MapScreenState extends State<MapScreen> {
                 // Акция на главной: это первый экран, и для гостя — первая
                 // возможность вообще узнать про колесо.
                 const WheelBanner(floating: true),
+                // Уже выигранный бонус. Карточка акции к этому моменту обычно
+                // уже исчезла (человек покрутил), и её место занимает счёт.
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: BonusStrip(),
+                ),
               ],
             ),
           ),
