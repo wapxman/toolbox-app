@@ -601,6 +601,7 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
               toolId: r['tool_id']?.toString() ?? '',
               toolName: (r['tools']?['name'] ?? '').toString(),
               kind: 'extension',
+              days: extraDays,
               existingOrderId: bill['id'].toString(),
               itemsPrice: (bill['items_price'] ?? toPay) as int,
               bonus: (bill['bonus_applied'] ?? 0) as int,

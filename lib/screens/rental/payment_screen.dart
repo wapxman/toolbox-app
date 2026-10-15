@@ -74,6 +74,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   bool get isCourierReturn => widget.kind == 'courier_return';
   bool get isPenalty => widget.kind == 'penalty';
+  bool get isExtension => widget.kind == 'extension';
   bool get isDelivery => widget.fulfillment == 'delivery';
   bool get needsConsent => !isPenalty && widget.existingOrderId == null;
 
@@ -213,6 +214,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
   String get _whatLabel {
     if (isPenalty) return 'Штраф за просрочку аренды';
     if (isCourierReturn) return 'Вызов курьера за инструментом';
+    if (isExtension) {
+      return widget.days > 0
+          ? 'Продление аренды на ${widget.days} ${AppConstants.daysWord(widget.days)}'
+          : 'Продление аренды';
+    }
     final what = widget.kind == 'buy' ? 'Покупка нового' : 'Аренда ${widget.days} ${AppConstants.daysWord(widget.days)}';
     final how = isDelivery ? 'доставка' : 'из бокса';
     return '$what • $how';
@@ -241,7 +247,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   Text(widget.slotLabel!, style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
                 ],
                 const SizedBox(height: 10),
-                if (!isCourierReturn && !isPenalty) _line(widget.kind == 'buy' ? 'Инструмент' : 'Аренда', AppConstants.formatPrice(widget.itemsPrice)),
+                if (!isCourierReturn && !isPenalty) _line(widget.kind == 'buy' ? 'Инструмент' : isExtension ? 'Продление' : 'Аренда', AppConstants.formatPrice(widget.itemsPrice)),
                 if (widget.discount > 0) _line('Скидка', '−${AppConstants.formatPrice(widget.discount)}', color: AppTheme.success),
                 if (widget.deliveryFee > 0) _line(isCourierReturn ? 'Выезд курьера' : 'Доставка', AppConstants.formatPrice(widget.deliveryFee)),
                 if (widget.bonus > 0)

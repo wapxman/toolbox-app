@@ -29,6 +29,7 @@ class OrderLabels {
     final kind = r['kind'] ?? 'rent';
     final days = (r['days'] ?? 0) as int;
     if (kind == 'penalty') return 'Штраф за просрочку аренды';
+    if (kind == 'extension') return days > 0 ? 'Продление на $days ${AppConstants.daysWord(days)}' : 'Продление аренды';
     final what = kind == 'buy' ? 'Покупка' : 'Аренда $days ${AppConstants.daysWord(days)}';
     final delivery = r['fulfillment'] == 'delivery';
     final pickupCell = (r['pickup_cell'] as Map<String, dynamic>?)?['cell_number'];
@@ -67,6 +68,7 @@ class OrderLabels {
     }
     if (s == 'completed') {
       if (kind == 'buy') return OrderStatusLabel('Куплен', AppTheme.success, green);
+      if (kind == 'extension') return OrderStatusLabel('Продление оплачено', AppTheme.success, green);
       return OrderStatusLabel('Возвращён${(r['overdue_fee'] ?? 0) > 0 ? ' со штрафом' : ''}', AppTheme.success, green);
     }
     if (isOverdue(r)) return OrderStatusLabel('Просрочена', AppTheme.error, red, danger: true);
