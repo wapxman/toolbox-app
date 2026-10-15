@@ -51,6 +51,9 @@ class _WheelScreenState extends State<WheelScreen> with SingleTickerProviderStat
   /// только потом узнаёт про условие.
   bool _requiresAccount = false;
 
+  /// Незабранный выигрыш уже показали в этот заход — второй раз не дёргаем.
+  bool _pendingHandled = false;
+
   /// Куда летят монетки — иконка кошелька в шапке.
   final _walletKey = GlobalKey();
 
@@ -127,8 +130,38 @@ class _WheelScreenState extends State<WheelScreen> with SingleTickerProviderStat
       });
       // Счёт мог измениться — плашки на главной и в магазине подхватят сами.
       BonusService().refresh();
+      // Незабранный выигрыш этого устройства: диалог «Забрать приз» потерялся
+      // (перезапуск, обычный вход вместо регистрации из диалога). Возвращаем
+      // человеку штатный путь забрать своё (F19).
+      final pend = d['pending_prize'];
+      if (pend is Map && !_pendingHandled) {
+        _pendingHandled = true;
+        final prize = pend.cast<String, dynamic>();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (_requiresAccount) {
+            _showWin(prize, true); // гость: тот же диалог с «Забрать приз»
+          } else {
+            _reclaim(prize); // уже вошёл — забираем без лишних вопросов
+          }
+        });
+      }
     } catch (e) {
       setState(() { _error = _human(e); _loading = false; });
+    }
+  }
+
+  /// Вошедший пользователь с незабранным выигрышем устройства: привязываем
+  /// сразу — человек своё уже выкрутил, спрашивать не о чем.
+  Future<void> _reclaim(Map<String, dynamic> prize) async {
+    try {
+      final r = await _api.claimWheelPrize();
+      if (((r['claimed'] ?? 0) as int) > 0 && mounted) {
+        _say('${prize['label']} — выигрыш зачислен на счёт');
+        _load();
+      }
+    } catch (_) {
+      // Сеть подвела — приз остаётся за устройством, заберём в следующий раз.
     }
   }
 

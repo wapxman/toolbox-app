@@ -190,10 +190,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
           Navigator.pop(context, true);
           return;
         }
-        final Widget next = (isDelivery || isCourierReturn)
-            ? OrderPlacedScreen(kind: widget.kind, toolName: widget.toolName,
-                slotLabel: res['delivery_slot_label']?.toString() ?? widget.slotLabel)
-            : UnlockScreen(toolName: widget.toolName, purchase: widget.kind == 'buy');
+        final Widget next;
+        if (isDelivery || isCourierReturn) {
+          next = OrderPlacedScreen(kind: widget.kind, toolName: widget.toolName,
+              slotLabel: res['delivery_slot_label']?.toString() ?? widget.slotLabel);
+        } else if (widget.kind == 'buy') {
+          // Покупку после оплаты ещё только кладут в ячейку. Экран «ячейка
+          // открыта» здесь лгал (F18): открытие придёт с уведомлением о
+          // готовности, а сейчас честно говорим «собираем заказ».
+          next = OrderPlacedScreen(kind: 'buy_pickup', toolName: widget.toolName);
+        } else {
+          next = UnlockScreen(orderId: _orderId!, toolName: widget.toolName);
+        }
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => next));
         return;
       } else if (res['status'] == 'cancelled') {

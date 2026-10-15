@@ -233,6 +233,11 @@ class ApiService {
   Future<Map<String, dynamic>> getPaymentStatus(String rentalId) =>
     _get('/rentals/$rentalId/payment-status');
 
+  /// Открыть ячейку заказа (аренда из бокса или готовая покупка). Сервер
+  /// отвечает только после реальной команды замку, поэтому успех — честный.
+  Future<Map<String, dynamic>> openCell(String rentalId) =>
+    _post('/rentals/$rentalId/open-cell', {});
+
   Future<Map<String, dynamic>> extendRental(String id, int extraDays) =>
     _post('/rentals/$id/extend', {'extra_days': extraDays});
 

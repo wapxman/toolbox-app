@@ -56,6 +56,17 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       await _api.verify(_phone, code);
+      // Выигрыш колеса, накрученный на этом телефоне до входа, привязываем к
+      // аккаунту сразу: раньше это делал только путь «регистрация из диалога
+      // выигрыша», и обычный вход терял гостевой приз (F19).
+      try {
+        final c = await _api.claimWheelPrize();
+        if (((c['claimed'] ?? 0) as int) > 0 && mounted) {
+          _toast('Выигрыш с Колеса Фортуны зачислен на счёт');
+        }
+      } catch (_) {
+        // Молчим: приз не пропал, экран колеса подхватит его при заходе.
+      }
       if (!mounted) return;
       if (widget.returnResult) {
         Navigator.pop(context, true);

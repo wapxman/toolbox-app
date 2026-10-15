@@ -342,6 +342,12 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
         w.add(btn(_busy ? spinner : const Text('Вернуть инструмент'), _busy ? null : _chooseReturn));
         w.add(const SizedBox(height: 10));
       }
+      // Повторный доступ к ячейке: после оплаты дверца могла не открыться или
+      // захлопнуться раньше времени, а честного повтора у клиента не было (F18).
+      if (r['fulfillment'] != 'delivery') {
+        w.add(btn(const Text('Открыть ячейку'), _busy ? null : _openCell, outlined: true));
+        w.add(const SizedBox(height: 10));
+      }
       w.add(btn(const Text('Продлить аренду'), _busy ? null : _showExtend, outlined: true));
     }
     return w;
@@ -369,6 +375,36 @@ class _RentalDetailScreenState extends State<RentalDetailScreen> {
     ));
     if (paid == true) { _changed = true; _toast('Штраф оплачен. Спасибо!'); }
     await _refresh();
+  }
+
+  /// Открыть ячейку активной аренды. Сервер отвечает после реальной команды
+  /// замку: не открылось — говорим честно, а не изображаем успех.
+  Future<void> _openCell() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Вы у бокса?', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+        content: Text('Ячейка откроется сразу после подтверждения — будьте рядом и закройте дверцу после.',
+            style: TextStyle(fontSize: 14, color: AppTheme.textSecondary, height: 1.45)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Открыть')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _busy = true);
+    try {
+      final res = await _api.openCell(r['id'].toString());
+      _toast('Ячейка ${res['cell_number'] ?? ''} открыта'.replaceAll('  ', ' '));
+    } on ApiException catch (e) {
+      _toast(e.message);
+    } catch (_) {
+      _toast('Не удалось открыть ячейку. Проверьте интернет.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _pickup() async {

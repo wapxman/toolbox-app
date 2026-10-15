@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../home/main_screen.dart';
 
-/// Экран после оплаты заказа с доставкой / вызова курьера.
+/// Экран после оплаты заказа с доставкой / вызова курьера / покупки из бокса.
 class OrderPlacedScreen extends StatelessWidget {
-  final String kind; // rent | buy | courier_return
+  final String kind; // rent | buy | courier_return | buy_pickup
   final String toolName;
   final String? slotLabel;
 
@@ -13,12 +13,17 @@ class OrderPlacedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isReturn = kind == 'courier_return';
-    final title = isReturn ? 'Курьер вызван' : 'Заказ оформлен';
+    // Покупка из бокса: заказ оплачен, но его ещё КЛАДУТ в ячейку. Обещать
+    // открытую ячейку сейчас нельзя — она откроется после готовности (F18).
+    final isPickupBuy = kind == 'buy_pickup';
+    final title = isReturn ? 'Курьер вызван' : isPickupBuy ? 'Заказ оплачен' : 'Заказ оформлен';
     final text = isReturn
         ? 'Курьер заберёт $toolName${slotLabel != null ? ': $slotLabel' : ''}. Аренда завершится, когда инструмент окажется у курьера.'
-        : kind == 'buy'
-            ? 'Курьер привезёт $toolName${slotLabel != null ? ': $slotLabel' : ''}. Перед выездом мы напишем в уведомлениях.'
-            : 'Курьер привезёт $toolName${slotLabel != null ? ': $slotLabel' : ''}. Срок аренды начнётся, когда вы получите инструмент.';
+        : isPickupBuy
+            ? 'Мы кладём $toolName в ячейку. Как заказ будет готов — придёт уведомление, тогда подходите к боксу и забирайте.'
+            : kind == 'buy'
+                ? 'Курьер привезёт $toolName${slotLabel != null ? ': $slotLabel' : ''}. Перед выездом мы напишем в уведомлениях.'
+                : 'Курьер привезёт $toolName${slotLabel != null ? ': $slotLabel' : ''}. Срок аренды начнётся, когда вы получите инструмент.';
 
     return Scaffold(
       body: SafeArea(
@@ -29,7 +34,9 @@ class OrderPlacedScreen extends StatelessWidget {
               Container(
                 width: 80, height: 80,
                 decoration: const BoxDecoration(color: AppTheme.primary, shape: BoxShape.circle),
-                child: Icon(isReturn ? Icons.undo : Icons.local_shipping_outlined, color: Colors.white, size: 40),
+                child: Icon(
+                    isReturn ? Icons.undo : isPickupBuy ? Icons.inventory_2_outlined : Icons.local_shipping_outlined,
+                    color: Colors.white, size: 40),
               ),
               const SizedBox(height: 28),
               Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),

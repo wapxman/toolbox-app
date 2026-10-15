@@ -55,6 +55,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _loading = true);
     try {
       await _api.verify(_phone, code);
+      // Гостевой выигрыш колеса привязываем сразу после регистрации любым
+      // путём, а не только из диалога выигрыша (F19). Для пути из диалога
+      // (returnResult) это сделает экран колеса — повтор не страшен: сервер
+      // отдаёт приз один раз.
+      if (!widget.returnResult) {
+        try {
+          final c = await _api.claimWheelPrize();
+          if (((c['claimed'] ?? 0) as int) > 0 && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Выигрыш с Колеса Фортуны зачислен на счёт')));
+          }
+        } catch (_) {
+          // Приз не пропал — экран колеса подхватит его при заходе.
+        }
+      }
       if (!mounted) return;
       if (widget.returnResult) {
         Navigator.pop(context, true);
