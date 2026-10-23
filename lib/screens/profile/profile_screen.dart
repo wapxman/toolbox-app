@@ -9,7 +9,6 @@ import 'notifications_screen.dart';
 import '../promo/bonus_strip.dart';
 import '../promo/wheel_screen.dart';
 import '../promo/wallet_screen.dart';
-import '../promo/winners_feed.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -103,7 +102,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  const WinnersFeed(),
                   CircleAvatar(
                     radius: 36,
                     backgroundColor: AppTheme.primary,
