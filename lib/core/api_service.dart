@@ -310,6 +310,12 @@ class ApiService {
   /// Только счёт и ближайшее сгорание — для плашек на главной и в магазине.
   Future<Map<String, dynamic>> getBonusBalance() => _get('/wheel/balance');
 
+  /// Последние выигрыши для ленты «Кто что выиграл». Открыта и гостю.
+  Future<List<Map<String, dynamic>>> getWinners() async {
+    final d = await _get('/wheel/winners?limit=5');
+    return ((d['winners'] ?? []) as List).cast<Map<String, dynamic>>();
+  }
+
   /// Сколько бонуса спишется с заказа на сумму [itemsPrice] (без доставки).
   Future<Map<String, dynamic>> getBonusQuote(int itemsPrice) =>
       _get('/wheel/quote?items_price=$itemsPrice');
